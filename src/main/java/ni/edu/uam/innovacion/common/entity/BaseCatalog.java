@@ -31,9 +31,18 @@ public abstract class BaseCatalog extends BaseModel {
     @Column(name = "nombre", nullable = false, length = 120)
     private String nombre;
 
-    @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")
+    @Size(max = 400, message = "La descripción no puede superar los 400 caracteres")
     @Column(name = "descripcion", length = 255)
     private String descripcion;
+
+
+    /**
+     * Estado general del registro.
+     *
+     * Permite saber si el dato está activo, inactivo o archivado.
+     * Esto evita eliminar físicamente información que puede servir
+     * para historial o reportes.
+     */
 
     @NotNull(message = "El estado del catálogo es obligatorio")
     @Enumerated(EnumType.STRING)
