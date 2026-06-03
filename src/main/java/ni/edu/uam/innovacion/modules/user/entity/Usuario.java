@@ -1,6 +1,5 @@
 package ni.edu.uam.innovacion.modules.user.entity;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -71,7 +70,7 @@ public class Usuario {
     @Column(name = "actualizado_en")
     private LocalDateTime actualizadoEn;
 
-    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = false)
+    @OneToMany(mappedBy = "usuario", orphanRemoval = false)
     private Set<UsuarioRol> usuarioRoles = new LinkedHashSet<>();
 
     @OneToOne(mappedBy = "usuario", fetch = FetchType.LAZY)
