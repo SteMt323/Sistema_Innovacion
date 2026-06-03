@@ -9,12 +9,12 @@ import ni.edu.uam.innovacion.modules.user.dto.PerfilMentorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilParticipanteExternoResponse;
 import ni.edu.uam.innovacion.modules.user.dto.RolResponse;
 import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
+import ni.edu.uam.innovacion.modules.catalog.entity.Rol;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilAdministrador;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilDocente;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilEstudiante;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilMentor;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilParticipanteExterno;
-import ni.edu.uam.innovacion.modules.user.entity.Rol;
 import ni.edu.uam.innovacion.modules.user.entity.Usuario;
 import ni.edu.uam.innovacion.modules.user.entity.UsuarioRol;
 import org.springframework.stereotype.Component;
@@ -44,7 +44,7 @@ public class UsuarioMapper {
     }
 
     public RolResponse toRolResponse(Rol rol) {
-        return new RolResponse(rol.getIdRol(), rol.getNombre(), rol.getDescripcion());
+        return new RolResponse(rol.getId(), rol.getNombre(), rol.getDescripcion());
     }
 
     public PerfilEstudianteResponse toPerfilEstudianteResponse(PerfilEstudiante perfil) {

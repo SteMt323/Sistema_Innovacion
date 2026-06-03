@@ -10,6 +10,7 @@ import jakarta.persistence.MapsId;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import ni.edu.uam.innovacion.modules.catalog.entity.Rol;
 
 @Entity
 @Table(name = "usuario_roles")

@@ -12,12 +12,12 @@ public class UsuarioRolId implements Serializable {
     private Long idUsuario;
 
     @Column(name = "id_rol")
-    private Integer idRol;
+    private Long idRol;
 
     public UsuarioRolId() {
     }
 
-    public UsuarioRolId(Long idUsuario, Integer idRol) {
+    public UsuarioRolId(Long idUsuario, Long idRol) {
         this.idUsuario = idUsuario;
         this.idRol = idRol;
     }
@@ -30,11 +30,11 @@ public class UsuarioRolId implements Serializable {
         this.idUsuario = idUsuario;
     }
 
-    public Integer getIdRol() {
+    public Long getIdRol() {
         return idRol;
     }
 
-    public void setIdRol(Integer idRol) {
+    public void setIdRol(Long idRol) {
         this.idRol = idRol;
     }
 

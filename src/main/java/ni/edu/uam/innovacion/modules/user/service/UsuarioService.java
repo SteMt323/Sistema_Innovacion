@@ -5,6 +5,8 @@ import java.util.List;
 import ni.edu.uam.innovacion.common.exception.BadRequestException;
 import ni.edu.uam.innovacion.common.exception.DuplicateResourceException;
 import ni.edu.uam.innovacion.common.exception.ResourceNotFoundException;
+import ni.edu.uam.innovacion.modules.catalog.entity.Rol;
+import ni.edu.uam.innovacion.modules.catalog.repository.RolRepository;
 import ni.edu.uam.innovacion.modules.user.dto.ActualizarUsuarioRequest;
 import ni.edu.uam.innovacion.modules.user.dto.AsignarRolRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CambiarContrasenaRequest;
@@ -26,7 +28,6 @@ import ni.edu.uam.innovacion.modules.user.entity.PerfilDocente;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilEstudiante;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilMentor;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilParticipanteExterno;
-import ni.edu.uam.innovacion.modules.user.entity.Rol;
 import ni.edu.uam.innovacion.modules.user.entity.Usuario;
 import ni.edu.uam.innovacion.modules.user.entity.UsuarioRol;
 import ni.edu.uam.innovacion.modules.user.enums.EstadoUsuario;
@@ -36,7 +37,6 @@ import ni.edu.uam.innovacion.modules.user.repository.PerfilDocenteRepository;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilEstudianteRepository;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilMentorRepository;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilParticipanteExternoRepository;
-import ni.edu.uam.innovacion.modules.user.repository.RolRepository;
 import ni.edu.uam.innovacion.modules.user.repository.UsuarioRepository;
 import ni.edu.uam.innovacion.modules.user.repository.UsuarioRolRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -160,7 +160,7 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponse asignarRol(Long idUsuario, AsignarRolRequest request) {
         Usuario usuario = buscarUsuario(idUsuario);
-        String nombreRol = RolService.normalizarNombreRol(request.nombreRol());
+        String nombreRol = normalizarNombreRol(request.nombreRol());
         Rol rol = rolRepository.findByNombreIgnoreCase(nombreRol)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el rol " + nombreRol));
 
@@ -180,7 +180,7 @@ public class UsuarioService {
     @Transactional
     public void desactivarRol(Long idUsuario, String nombreRol) {
         buscarUsuario(idUsuario);
-        String rolNormalizado = RolService.normalizarNombreRol(nombreRol);
+        String rolNormalizado = normalizarNombreRol(nombreRol);
         validarRolSinPerfilAsociado(idUsuario, rolNormalizado);
 
         UsuarioRol usuarioRol = usuarioRolRepository
@@ -399,6 +399,10 @@ public class UsuarioService {
     private String normalizarCorreoOpcional(String correo) {
         String correoNormalizado = normalizarCorreo(correo);
         return correoNormalizado == null || correoNormalizado.isBlank() ? null : correoNormalizado;
+    }
+
+    private String normalizarNombreRol(String nombreRol) {
+        return nombreRol == null ? null : nombreRol.trim().toLowerCase();
     }
 
     private String limpiar(String valor) {

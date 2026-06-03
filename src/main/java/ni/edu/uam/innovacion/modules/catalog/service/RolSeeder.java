@@ -1,15 +1,15 @@
-package ni.edu.uam.innovacion.modules.user.service;
+package ni.edu.uam.innovacion.modules.catalog.service;
 
 import java.util.Map;
-import ni.edu.uam.innovacion.modules.user.entity.Rol;
-import ni.edu.uam.innovacion.modules.user.repository.RolRepository;
+import ni.edu.uam.innovacion.modules.catalog.entity.Rol;
+import ni.edu.uam.innovacion.modules.catalog.repository.RolRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-public class RoleSeeder implements ApplicationRunner {
+public class RolSeeder implements ApplicationRunner {
 
     private static final Map<String, String> ROLES_BASE = Map.of(
         "estudiante", "Usuario estudiante del sistema",
@@ -21,7 +21,7 @@ public class RoleSeeder implements ApplicationRunner {
 
     private final RolRepository rolRepository;
 
-    public RoleSeeder(RolRepository rolRepository) {
+    public RolSeeder(RolRepository rolRepository) {
         this.rolRepository = rolRepository;
     }
 
@@ -30,10 +30,7 @@ public class RoleSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         ROLES_BASE.forEach((nombre, descripcion) -> {
             if (!rolRepository.existsByNombreIgnoreCase(nombre)) {
-                Rol rol = new Rol();
-                rol.setNombre(nombre);
-                rol.setDescripcion(descripcion);
-                rolRepository.save(rol);
+                rolRepository.save(new Rol(nombre, descripcion));
             }
         });
     }

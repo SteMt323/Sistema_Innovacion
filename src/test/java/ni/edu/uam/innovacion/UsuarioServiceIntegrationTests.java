@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import ni.edu.uam.innovacion.common.exception.BadRequestException;
 import ni.edu.uam.innovacion.common.exception.DuplicateResourceException;
+import ni.edu.uam.innovacion.modules.catalog.service.RolService;
 import ni.edu.uam.innovacion.modules.user.dto.AsignarRolRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilAdministradorRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilDocenteRequest;
@@ -28,7 +29,6 @@ import ni.edu.uam.innovacion.modules.user.entity.Usuario;
 import ni.edu.uam.innovacion.modules.user.enums.GradoAcademico;
 import ni.edu.uam.innovacion.modules.user.repository.UsuarioRepository;
 import ni.edu.uam.innovacion.modules.user.repository.UsuarioRolRepository;
-import ni.edu.uam.innovacion.modules.user.service.RolService;
 import ni.edu.uam.innovacion.modules.user.service.UsuarioService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,8 +98,8 @@ class UsuarioServiceIntegrationTests {
 
     @Test
     void listaRolesSembrados() {
-        List<String> roles = rolService.listarRoles().stream()
-            .map(rol -> rol.nombre())
+        List<String> roles = rolService.listarTodos().stream()
+            .map(rol -> rol.getNombre())
             .toList();
 
         assertTrue(roles.contains("estudiante"));
