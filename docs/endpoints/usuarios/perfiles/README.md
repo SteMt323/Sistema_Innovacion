@@ -31,7 +31,6 @@ Base path:
 - Para crear perfil docente, el usuario debe tener rol activo `docente`.
 - Para crear perfil mentor, el usuario debe tener rol activo `mentor`.
 - Para crear perfil participante externo, el usuario debe tener rol activo `participante_externo`.
-- No se puede desactivar un rol si ya existe el perfil asociado.
 
 ## Schemas
 
