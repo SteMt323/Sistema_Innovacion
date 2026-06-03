@@ -31,7 +31,7 @@ public abstract class BaseCatalog extends BaseModel {
     @Column(name = "nombre", nullable = false, length = 120)
     private String nombre;
 
-    @Size(max = 400, message = "La descripción no puede superar los 400 caracteres")
+    @Size(max = 255, message = "La descripción no puede superar los 400 caracteres")
     @Column(name = "descripcion", length = 255)
     private String descripcion;
 
