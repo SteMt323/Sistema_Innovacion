@@ -3,14 +3,17 @@ package ni.edu.uam.innovacion.modules.user.controller;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import ni.edu.uam.innovacion.modules.user.dto.ActualizarPerfilEstudianteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.ActualizarUsuarioRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CambiarContrasenaRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearDobleTitulacionRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilAdministradorRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilDocenteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilEstudianteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilMentorRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilParticipanteExternoRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearUsuarioRequest;
+import ni.edu.uam.innovacion.modules.user.dto.DobleTitulacionResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilAdministradorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilDocenteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilEstudianteResponse;
@@ -18,7 +21,9 @@ import ni.edu.uam.innovacion.modules.user.dto.PerfilMentorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilParticipanteExternoResponse;
 import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
 import ni.edu.uam.innovacion.modules.user.service.UsuarioService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -86,6 +91,42 @@ public class UsuarioController {
     @GetMapping("/{idUsuario}/perfiles/estudiante")
     public PerfilEstudianteResponse obtenerPerfilEstudiante(@PathVariable Long idUsuario) {
         return usuarioService.obtenerPerfilEstudiante(idUsuario);
+    }
+
+    @PutMapping("/{idUsuario}/perfiles/estudiante")
+    public PerfilEstudianteResponse actualizarPerfilEstudiante(
+        @PathVariable Long idUsuario,
+        @Valid @RequestBody ActualizarPerfilEstudianteRequest request
+    ) {
+        return usuarioService.actualizarPerfilEstudiante(idUsuario, request);
+    }
+
+    @GetMapping("/{idUsuario}/perfiles/estudiante/doble-titulaciones")
+    public List<DobleTitulacionResponse> listarDobleTitulaciones(@PathVariable Long idUsuario) {
+        return usuarioService.listarDobleTitulaciones(idUsuario);
+    }
+
+    @PostMapping("/{idUsuario}/perfiles/estudiante/doble-titulaciones")
+    public ResponseEntity<DobleTitulacionResponse> crearDobleTitulacion(
+        @PathVariable Long idUsuario,
+        @Valid @RequestBody CrearDobleTitulacionRequest request
+    ) {
+        DobleTitulacionResponse response = usuarioService.crearDobleTitulacion(idUsuario, request);
+        return ResponseEntity
+            .created(URI.create(
+                "/api/usuarios/" + idUsuario + "/perfiles/estudiante/doble-titulaciones/"
+                    + response.idDobleTitulacion()
+            ))
+            .body(response);
+    }
+
+    @DeleteMapping("/{idUsuario}/perfiles/estudiante/doble-titulaciones/{idDobleTitulacion}")
+    public ResponseEntity<Void> eliminarDobleTitulacion(
+        @PathVariable Long idUsuario,
+        @PathVariable Long idDobleTitulacion
+    ) {
+        usuarioService.eliminarDobleTitulacion(idUsuario, idDobleTitulacion);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @PostMapping("/{idUsuario}/perfiles/administrador")

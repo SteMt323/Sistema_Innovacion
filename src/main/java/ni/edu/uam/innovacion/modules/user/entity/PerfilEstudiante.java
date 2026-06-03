@@ -35,7 +35,7 @@ public class PerfilEstudiante {
     @Column(name = "correo_institucional", length = 150)
     private String correoInstitucional;
 
-    @Column(name = "id_carrera_principal")
+    @Column(name = "id_carrera_principal", nullable = false)
     private Long idCarreraPrincipal;
 
     @Column(name = "doble_titular", nullable = false)
