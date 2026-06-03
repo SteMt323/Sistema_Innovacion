@@ -3,11 +3,17 @@ package ni.edu.uam.innovacion.modules.user.mapper;
 import java.util.Comparator;
 import java.util.List;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilAdministradorResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilDocenteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilEstudianteResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilMentorResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilParticipanteExternoResponse;
 import ni.edu.uam.innovacion.modules.user.dto.RolResponse;
 import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilAdministrador;
+import ni.edu.uam.innovacion.modules.user.entity.PerfilDocente;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilEstudiante;
+import ni.edu.uam.innovacion.modules.user.entity.PerfilMentor;
+import ni.edu.uam.innovacion.modules.user.entity.PerfilParticipanteExterno;
 import ni.edu.uam.innovacion.modules.user.entity.Rol;
 import ni.edu.uam.innovacion.modules.user.entity.Usuario;
 import ni.edu.uam.innovacion.modules.user.entity.UsuarioRol;
@@ -30,7 +36,10 @@ public class UsuarioMapper {
             usuario.getUltimoAcceso(),
             toRolResponses(usuario),
             toPerfilEstudianteResponse(usuario.getPerfilEstudiante()),
-            toPerfilAdministradorResponse(usuario.getPerfilAdministrador())
+            toPerfilAdministradorResponse(usuario.getPerfilAdministrador()),
+            toPerfilDocenteResponse(usuario.getPerfilDocente()),
+            toPerfilMentorResponse(usuario.getPerfilMentor()),
+            toPerfilParticipanteExternoResponse(usuario.getPerfilParticipanteExterno())
         );
     }
 
@@ -61,6 +70,49 @@ public class UsuarioMapper {
             perfil.getIdUsuario(),
             perfil.getCargo(),
             perfil.getNivelAcceso()
+        );
+    }
+
+    public PerfilDocenteResponse toPerfilDocenteResponse(PerfilDocente perfil) {
+        if (perfil == null) {
+            return null;
+        }
+
+        return new PerfilDocenteResponse(
+            perfil.getIdUsuario(),
+            perfil.getAreaAcademica(),
+            perfil.getCargo(),
+            perfil.getGradoAcademico(),
+            perfil.getTituloUniversitario(),
+            perfil.getIdFacultad()
+        );
+    }
+
+    public PerfilMentorResponse toPerfilMentorResponse(PerfilMentor perfil) {
+        if (perfil == null) {
+            return null;
+        }
+
+        return new PerfilMentorResponse(
+            perfil.getIdUsuario(),
+            perfil.getAreaExperiencia(),
+            perfil.getEspecialidad(),
+            perfil.getInstitucion(),
+            perfil.getTipoAcompanamiento(),
+            perfil.getGradoAcademico(),
+            perfil.getTituloUniversitario()
+        );
+    }
+
+    public PerfilParticipanteExternoResponse toPerfilParticipanteExternoResponse(PerfilParticipanteExterno perfil) {
+        if (perfil == null) {
+            return null;
+        }
+
+        return new PerfilParticipanteExternoResponse(
+            perfil.getIdUsuario(),
+            perfil.getOcupacion(),
+            perfil.getInstitucionProcedencia()
         );
     }
 

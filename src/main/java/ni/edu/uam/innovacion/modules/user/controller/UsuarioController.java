@@ -4,18 +4,21 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import ni.edu.uam.innovacion.modules.user.dto.ActualizarUsuarioRequest;
-import ni.edu.uam.innovacion.modules.user.dto.AsignarRolRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CambiarContrasenaRequest;
-import ni.edu.uam.innovacion.modules.user.dto.CambiarEstadoUsuarioRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilAdministradorRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilDocenteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilEstudianteRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilMentorRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilParticipanteExternoRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearUsuarioRequest;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilAdministradorResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilDocenteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilEstudianteResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilMentorResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilParticipanteExternoResponse;
 import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
 import ni.edu.uam.innovacion.modules.user.service.UsuarioService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -69,31 +72,6 @@ public class UsuarioController {
         return usuarioService.cambiarContrasena(idUsuario, request);
     }
 
-    @PatchMapping("/{idUsuario}/estado")
-    public UsuarioResponse cambiarEstado(
-        @PathVariable Long idUsuario,
-        @Valid @RequestBody CambiarEstadoUsuarioRequest request
-    ) {
-        return usuarioService.cambiarEstado(idUsuario, request);
-    }
-
-    @PostMapping("/{idUsuario}/roles")
-    public UsuarioResponse asignarRol(
-        @PathVariable Long idUsuario,
-        @Valid @RequestBody AsignarRolRequest request
-    ) {
-        return usuarioService.asignarRol(idUsuario, request);
-    }
-
-    @DeleteMapping("/{idUsuario}/roles/{nombreRol}")
-    public ResponseEntity<Void> desactivarRol(
-        @PathVariable Long idUsuario,
-        @PathVariable String nombreRol
-    ) {
-        usuarioService.desactivarRol(idUsuario, nombreRol);
-        return ResponseEntity.noContent().build();
-    }
-
     @PostMapping("/{idUsuario}/perfiles/estudiante")
     public ResponseEntity<PerfilEstudianteResponse> crearPerfilEstudiante(
         @PathVariable Long idUsuario,
@@ -124,5 +102,53 @@ public class UsuarioController {
     @GetMapping("/{idUsuario}/perfiles/administrador")
     public PerfilAdministradorResponse obtenerPerfilAdministrador(@PathVariable Long idUsuario) {
         return usuarioService.obtenerPerfilAdministrador(idUsuario);
+    }
+
+    @PostMapping("/{idUsuario}/perfiles/docente")
+    public ResponseEntity<PerfilDocenteResponse> crearPerfilDocente(
+        @PathVariable Long idUsuario,
+        @Valid @RequestBody CrearPerfilDocenteRequest request
+    ) {
+        PerfilDocenteResponse response = usuarioService.crearPerfilDocente(idUsuario, request);
+        return ResponseEntity
+            .created(URI.create("/api/usuarios/" + idUsuario + "/perfiles/docente"))
+            .body(response);
+    }
+
+    @GetMapping("/{idUsuario}/perfiles/docente")
+    public PerfilDocenteResponse obtenerPerfilDocente(@PathVariable Long idUsuario) {
+        return usuarioService.obtenerPerfilDocente(idUsuario);
+    }
+
+    @PostMapping("/{idUsuario}/perfiles/mentor")
+    public ResponseEntity<PerfilMentorResponse> crearPerfilMentor(
+        @PathVariable Long idUsuario,
+        @Valid @RequestBody CrearPerfilMentorRequest request
+    ) {
+        PerfilMentorResponse response = usuarioService.crearPerfilMentor(idUsuario, request);
+        return ResponseEntity
+            .created(URI.create("/api/usuarios/" + idUsuario + "/perfiles/mentor"))
+            .body(response);
+    }
+
+    @GetMapping("/{idUsuario}/perfiles/mentor")
+    public PerfilMentorResponse obtenerPerfilMentor(@PathVariable Long idUsuario) {
+        return usuarioService.obtenerPerfilMentor(idUsuario);
+    }
+
+    @PostMapping("/{idUsuario}/perfiles/participante-externo")
+    public ResponseEntity<PerfilParticipanteExternoResponse> crearPerfilParticipanteExterno(
+        @PathVariable Long idUsuario,
+        @Valid @RequestBody CrearPerfilParticipanteExternoRequest request
+    ) {
+        PerfilParticipanteExternoResponse response = usuarioService.crearPerfilParticipanteExterno(idUsuario, request);
+        return ResponseEntity
+            .created(URI.create("/api/usuarios/" + idUsuario + "/perfiles/participante-externo"))
+            .body(response);
+    }
+
+    @GetMapping("/{idUsuario}/perfiles/participante-externo")
+    public PerfilParticipanteExternoResponse obtenerPerfilParticipanteExterno(@PathVariable Long idUsuario) {
+        return usuarioService.obtenerPerfilParticipanteExterno(idUsuario);
     }
 }

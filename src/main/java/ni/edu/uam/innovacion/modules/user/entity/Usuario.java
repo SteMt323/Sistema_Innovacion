@@ -80,6 +80,15 @@ public class Usuario {
     @OneToOne(mappedBy = "usuario", fetch = FetchType.LAZY)
     private PerfilAdministrador perfilAdministrador;
 
+    @OneToOne(mappedBy = "usuario", fetch = FetchType.LAZY)
+    private PerfilDocente perfilDocente;
+
+    @OneToOne(mappedBy = "usuario", fetch = FetchType.LAZY)
+    private PerfilMentor perfilMentor;
+
+    @OneToOne(mappedBy = "usuario", fetch = FetchType.LAZY)
+    private PerfilParticipanteExterno perfilParticipanteExterno;
+
     @PrePersist
     void prePersist() {
         LocalDateTime ahora = LocalDateTime.now();
@@ -225,5 +234,29 @@ public class Usuario {
 
     public void setPerfilAdministrador(PerfilAdministrador perfilAdministrador) {
         this.perfilAdministrador = perfilAdministrador;
+    }
+
+    public PerfilDocente getPerfilDocente() {
+        return perfilDocente;
+    }
+
+    public void setPerfilDocente(PerfilDocente perfilDocente) {
+        this.perfilDocente = perfilDocente;
+    }
+
+    public PerfilMentor getPerfilMentor() {
+        return perfilMentor;
+    }
+
+    public void setPerfilMentor(PerfilMentor perfilMentor) {
+        this.perfilMentor = perfilMentor;
+    }
+
+    public PerfilParticipanteExterno getPerfilParticipanteExterno() {
+        return perfilParticipanteExterno;
+    }
+
+    public void setPerfilParticipanteExterno(PerfilParticipanteExterno perfilParticipanteExterno) {
+        this.perfilParticipanteExterno = perfilParticipanteExterno;
     }
 }

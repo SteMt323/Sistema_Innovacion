@@ -13,12 +13,19 @@ import ni.edu.uam.innovacion.common.exception.BadRequestException;
 import ni.edu.uam.innovacion.common.exception.DuplicateResourceException;
 import ni.edu.uam.innovacion.modules.user.dto.AsignarRolRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilAdministradorRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilDocenteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilEstudianteRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilMentorRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilParticipanteExternoRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearUsuarioRequest;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilAdministradorResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilDocenteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilEstudianteResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilMentorResponse;
+import ni.edu.uam.innovacion.modules.user.dto.PerfilParticipanteExternoResponse;
 import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
 import ni.edu.uam.innovacion.modules.user.entity.Usuario;
+import ni.edu.uam.innovacion.modules.user.enums.GradoAcademico;
 import ni.edu.uam.innovacion.modules.user.repository.UsuarioRepository;
 import ni.edu.uam.innovacion.modules.user.repository.UsuarioRolRepository;
 import ni.edu.uam.innovacion.modules.user.service.RolService;
@@ -180,6 +187,119 @@ class UsuarioServiceIntegrationTests {
         assertEquals(creado, consultado);
     }
 
+    @Test
+    void rechazaPerfilDocenteSinRolDocente() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("sin-rol-docente"));
+
+        assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilDocente(
+            usuario.idUsuario(),
+            perfilDocenteRequest()
+        ));
+    }
+
+    @Test
+    void creaYConsultaPerfilDocente() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("perfil-docente"));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("docente"));
+
+        PerfilDocenteResponse creado = usuarioService.crearPerfilDocente(usuario.idUsuario(), perfilDocenteRequest());
+        PerfilDocenteResponse consultado = usuarioService.obtenerPerfilDocente(usuario.idUsuario());
+        UsuarioResponse usuarioConPerfil = usuarioService.obtenerUsuario(usuario.idUsuario());
+
+        assertEquals(usuario.idUsuario(), creado.idUsuario());
+        assertEquals("Innovacion educativa", creado.areaAcademica());
+        assertEquals("Docente investigador", creado.cargo());
+        assertEquals(GradoAcademico.MAESTRIA, creado.gradoAcademico());
+        assertEquals("Maestria en educacion", creado.tituloUniversitario());
+        assertNull(creado.idFacultad());
+        assertEquals(creado, consultado);
+        assertEquals(creado, usuarioConPerfil.perfilDocente());
+    }
+
+    @Test
+    void rechazaPerfilDocenteDuplicado() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("duplicado-docente"));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("docente"));
+        usuarioService.crearPerfilDocente(usuario.idUsuario(), perfilDocenteRequest());
+
+        assertThrows(DuplicateResourceException.class, () -> usuarioService.crearPerfilDocente(
+            usuario.idUsuario(),
+            perfilDocenteRequest()
+        ));
+    }
+
+    @Test
+    void rechazaPerfilMentorSinRolMentor() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("sin-rol-mentor"));
+
+        assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilMentor(
+            usuario.idUsuario(),
+            perfilMentorRequest()
+        ));
+    }
+
+    @Test
+    void creaYConsultaPerfilMentor() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("perfil-mentor"));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("mentor"));
+
+        PerfilMentorResponse creado = usuarioService.crearPerfilMentor(usuario.idUsuario(), perfilMentorRequest());
+        PerfilMentorResponse consultado = usuarioService.obtenerPerfilMentor(usuario.idUsuario());
+        UsuarioResponse usuarioConPerfil = usuarioService.obtenerUsuario(usuario.idUsuario());
+
+        assertEquals(usuario.idUsuario(), creado.idUsuario());
+        assertEquals("Modelos de negocio", creado.areaExperiencia());
+        assertEquals("Emprendimiento", creado.especialidad());
+        assertEquals("UAM", creado.institucion());
+        assertEquals("Mentoria grupal", creado.tipoAcompanamiento());
+        assertEquals(GradoAcademico.DOCTORADO, creado.gradoAcademico());
+        assertEquals("Doctorado en innovacion", creado.tituloUniversitario());
+        assertEquals(creado, consultado);
+        assertEquals(creado, usuarioConPerfil.perfilMentor());
+    }
+
+    @Test
+    void rechazaPerfilParticipanteExternoSinRolParticipanteExterno() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("sin-rol-externo"));
+
+        assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilParticipanteExterno(
+            usuario.idUsuario(),
+            perfilParticipanteExternoRequest()
+        ));
+    }
+
+    @Test
+    void creaYConsultaPerfilParticipanteExterno() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("perfil-externo"));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("participante_externo"));
+
+        PerfilParticipanteExternoResponse creado = usuarioService.crearPerfilParticipanteExterno(
+            usuario.idUsuario(),
+            perfilParticipanteExternoRequest()
+        );
+        PerfilParticipanteExternoResponse consultado = usuarioService.obtenerPerfilParticipanteExterno(usuario.idUsuario());
+        UsuarioResponse usuarioConPerfil = usuarioService.obtenerUsuario(usuario.idUsuario());
+
+        assertEquals(usuario.idUsuario(), creado.idUsuario());
+        assertEquals("Emprendedor", creado.ocupacion());
+        assertEquals("Empresa externa", creado.institucionProcedencia());
+        assertEquals(creado, consultado);
+        assertEquals(creado, usuarioConPerfil.perfilParticipanteExterno());
+    }
+
+    @Test
+    void bloqueaDesactivarRolConPerfilAsociado() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("bloqueo-rol"));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("mentor"));
+        usuarioService.crearPerfilMentor(usuario.idUsuario(), perfilMentorRequest());
+
+        assertThrows(BadRequestException.class, () -> usuarioService.desactivarRol(usuario.idUsuario(), "mentor"));
+        assertTrue(usuarioRolRepository.existsByUsuarioIdUsuarioAndRolNombreIgnoreCaseAndActivoTrue(
+            usuario.idUsuario(),
+            "mentor"
+        ));
+    }
+
     private CrearUsuarioRequest usuarioRequest(String sufijo) {
         String normalizado = sufijo.toLowerCase();
         return new CrearUsuarioRequest(
@@ -190,6 +310,34 @@ class UsuarioServiceIntegrationTests {
             "secreto123",
             "F",
             "M"
+        );
+    }
+
+    private CrearPerfilDocenteRequest perfilDocenteRequest() {
+        return new CrearPerfilDocenteRequest(
+            "Innovacion educativa",
+            "Docente investigador",
+            GradoAcademico.MAESTRIA,
+            "Maestria en educacion",
+            null
+        );
+    }
+
+    private CrearPerfilMentorRequest perfilMentorRequest() {
+        return new CrearPerfilMentorRequest(
+            "Modelos de negocio",
+            "Emprendimiento",
+            "UAM",
+            "Mentoria grupal",
+            GradoAcademico.DOCTORADO,
+            "Doctorado en innovacion"
+        );
+    }
+
+    private CrearPerfilParticipanteExternoRequest perfilParticipanteExternoRequest() {
+        return new CrearPerfilParticipanteExternoRequest(
+            "Emprendedor",
+            "Empresa externa"
         );
     }
 }

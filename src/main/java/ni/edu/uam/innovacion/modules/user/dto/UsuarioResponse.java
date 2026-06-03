@@ -17,6 +17,9 @@ public record UsuarioResponse(
     LocalDateTime ultimoAcceso,
     List<RolResponse> roles,
     PerfilEstudianteResponse perfilEstudiante,
-    PerfilAdministradorResponse perfilAdministrador
+    PerfilAdministradorResponse perfilAdministrador,
+    PerfilDocenteResponse perfilDocente,
+    PerfilMentorResponse perfilMentor,
+    PerfilParticipanteExternoResponse perfilParticipanteExterno
 ) {
 }
