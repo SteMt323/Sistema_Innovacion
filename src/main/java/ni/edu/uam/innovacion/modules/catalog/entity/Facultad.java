@@ -46,7 +46,7 @@ public class Facultad extends BaseCatalog {
 
     public Facultad(String nombre, String descripcion, String codigo) {
         super(nombre, descripcion);
-        this.codigo = codigo;
+        setCodigo(codigo);
     }
 
     /**
