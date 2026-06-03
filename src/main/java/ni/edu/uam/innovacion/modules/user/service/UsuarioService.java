@@ -2,27 +2,34 @@ package ni.edu.uam.innovacion.modules.user.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import ni.edu.uam.innovacion.common.enums.EstadoRegistro;
 import ni.edu.uam.innovacion.common.exception.BadRequestException;
 import ni.edu.uam.innovacion.common.exception.DuplicateResourceException;
 import ni.edu.uam.innovacion.common.exception.ResourceNotFoundException;
+import ni.edu.uam.innovacion.modules.catalog.entity.Carrera;
 import ni.edu.uam.innovacion.modules.catalog.entity.Rol;
+import ni.edu.uam.innovacion.modules.catalog.repository.CarreraRepository;
 import ni.edu.uam.innovacion.modules.catalog.repository.RolRepository;
+import ni.edu.uam.innovacion.modules.user.dto.ActualizarPerfilEstudianteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.ActualizarUsuarioRequest;
 import ni.edu.uam.innovacion.modules.user.dto.AsignarRolRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CambiarContrasenaRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CambiarEstadoUsuarioRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearDobleTitulacionRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilAdministradorRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilDocenteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilEstudianteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilMentorRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilParticipanteExternoRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearUsuarioRequest;
+import ni.edu.uam.innovacion.modules.user.dto.DobleTitulacionResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilAdministradorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilDocenteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilEstudianteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilMentorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilParticipanteExternoResponse;
 import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
+import ni.edu.uam.innovacion.modules.user.entity.DobleTitulacion;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilAdministrador;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilDocente;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilEstudiante;
@@ -32,6 +39,7 @@ import ni.edu.uam.innovacion.modules.user.entity.Usuario;
 import ni.edu.uam.innovacion.modules.user.entity.UsuarioRol;
 import ni.edu.uam.innovacion.modules.user.enums.EstadoUsuario;
 import ni.edu.uam.innovacion.modules.user.mapper.UsuarioMapper;
+import ni.edu.uam.innovacion.modules.user.repository.DobleTitulacionRepository;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilAdministradorRepository;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilDocenteRepository;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilEstudianteRepository;
@@ -54,35 +62,41 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
+    private final CarreraRepository carreraRepository;
     private final UsuarioRolRepository usuarioRolRepository;
     private final PerfilEstudianteRepository perfilEstudianteRepository;
     private final PerfilAdministradorRepository perfilAdministradorRepository;
     private final PerfilDocenteRepository perfilDocenteRepository;
     private final PerfilMentorRepository perfilMentorRepository;
     private final PerfilParticipanteExternoRepository perfilParticipanteExternoRepository;
+    private final DobleTitulacionRepository dobleTitulacionRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
 
     public UsuarioService(
         UsuarioRepository usuarioRepository,
         RolRepository rolRepository,
+        CarreraRepository carreraRepository,
         UsuarioRolRepository usuarioRolRepository,
         PerfilEstudianteRepository perfilEstudianteRepository,
         PerfilAdministradorRepository perfilAdministradorRepository,
         PerfilDocenteRepository perfilDocenteRepository,
         PerfilMentorRepository perfilMentorRepository,
         PerfilParticipanteExternoRepository perfilParticipanteExternoRepository,
+        DobleTitulacionRepository dobleTitulacionRepository,
         PasswordEncoder passwordEncoder,
         UsuarioMapper usuarioMapper
     ) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
+        this.carreraRepository = carreraRepository;
         this.usuarioRolRepository = usuarioRolRepository;
         this.perfilEstudianteRepository = perfilEstudianteRepository;
         this.perfilAdministradorRepository = perfilAdministradorRepository;
         this.perfilDocenteRepository = perfilDocenteRepository;
         this.perfilMentorRepository = perfilMentorRepository;
         this.perfilParticipanteExternoRepository = perfilParticipanteExternoRepository;
+        this.dobleTitulacionRepository = dobleTitulacionRepository;
         this.passwordEncoder = passwordEncoder;
         this.usuarioMapper = usuarioMapper;
     }
@@ -172,9 +186,10 @@ public class UsuarioService {
         usuarioRol.setRol(rol);
         usuarioRol.setActivo(Boolean.TRUE);
         usuarioRol.setFechaAsignacion(LocalDateTime.now());
-        usuarioRolRepository.saveAndFlush(usuarioRol);
+        UsuarioRol guardado = usuarioRolRepository.saveAndFlush(usuarioRol);
+        usuario.getUsuarioRoles().add(guardado);
 
-        return usuarioMapper.toResponse(buscarUsuario(idUsuario));
+        return usuarioMapper.toResponse(usuario);
     }
 
     @Transactional
@@ -197,6 +212,11 @@ public class UsuarioService {
     public PerfilEstudianteResponse crearPerfilEstudiante(Long idUsuario, CrearPerfilEstudianteRequest request) {
         Usuario usuario = buscarUsuario(idUsuario);
         validarRolActivo(idUsuario, ROL_ESTUDIANTE, "Para crear perfil estudiante el usuario debe tener rol estudiante activo");
+        Carrera carreraPrincipal = obtenerCarreraActiva(
+            request.idCarreraPrincipal(),
+            "No existe la carrera principal con id " + request.idCarreraPrincipal(),
+            "La carrera principal debe estar activa"
+        );
 
         if (perfilEstudianteRepository.existsById(idUsuario)) {
             throw new DuplicateResourceException("El usuario ya tiene perfil estudiante");
@@ -216,8 +236,8 @@ public class UsuarioService {
         perfil.setUsuario(usuario);
         perfil.setCif(cif);
         perfil.setCorreoInstitucional(correoInstitucional);
-        perfil.setIdCarreraPrincipal(request.idCarreraPrincipal());
-        perfil.setDobleTitular(Boolean.TRUE.equals(request.dobleTitular()));
+        perfil.setIdCarreraPrincipal(carreraPrincipal.getId());
+        perfil.setDobleTitular(Boolean.FALSE);
 
         PerfilEstudiante guardado = perfilEstudianteRepository.save(perfil);
         usuario.setPerfilEstudiante(guardado);
@@ -229,6 +249,94 @@ public class UsuarioService {
         PerfilEstudiante perfil = perfilEstudianteRepository.findById(idUsuario)
             .orElseThrow(() -> new ResourceNotFoundException("El usuario no tiene perfil estudiante"));
         return usuarioMapper.toPerfilEstudianteResponse(perfil);
+    }
+
+    @Transactional
+    public PerfilEstudianteResponse actualizarPerfilEstudiante(
+        Long idUsuario,
+        ActualizarPerfilEstudianteRequest request
+    ) {
+        PerfilEstudiante perfil = obtenerPerfilEstudianteEntidad(idUsuario);
+        Carrera carreraPrincipal = obtenerCarreraActiva(
+            request.idCarreraPrincipal(),
+            "No existe la carrera principal con id " + request.idCarreraPrincipal(),
+            "La carrera principal debe estar activa"
+        );
+
+        String cif = limpiar(request.cif());
+        if (perfilEstudianteRepository.existsByCifIgnoreCaseAndIdUsuarioNot(cif, idUsuario)) {
+            throw new DuplicateResourceException("Ya existe otro perfil estudiante con el CIF " + cif);
+        }
+
+        String correoInstitucional = normalizarCorreoOpcional(request.correoInstitucional());
+        if (correoInstitucional != null
+            && perfilEstudianteRepository.existsByCorreoInstitucionalIgnoreCaseAndIdUsuarioNot(correoInstitucional, idUsuario)) {
+            throw new DuplicateResourceException(
+                "Ya existe otro perfil estudiante con el correo institucional " + correoInstitucional
+            );
+        }
+
+        validarCarreraPrincipalNoEsSecundariaActiva(idUsuario, carreraPrincipal.getId());
+
+        perfil.setCif(cif);
+        perfil.setCorreoInstitucional(correoInstitucional);
+        perfil.setIdCarreraPrincipal(carreraPrincipal.getId());
+        sincronizarDobleTitular(perfil);
+
+        return usuarioMapper.toPerfilEstudianteResponse(perfilEstudianteRepository.save(perfil));
+    }
+
+    @Transactional(readOnly = true)
+    public List<DobleTitulacionResponse> listarDobleTitulaciones(Long idUsuario) {
+        obtenerPerfilEstudianteEntidad(idUsuario);
+        return dobleTitulacionRepository
+            .findByPerfilEstudianteIdUsuarioAndEstadoOrderByFechaRegistroDesc(idUsuario, EstadoRegistro.ACTIVO)
+            .stream()
+            .map(usuarioMapper::toDobleTitulacionResponse)
+            .toList();
+    }
+
+    @Transactional
+    public DobleTitulacionResponse crearDobleTitulacion(Long idUsuario, CrearDobleTitulacionRequest request) {
+        PerfilEstudiante perfil = obtenerPerfilEstudianteEntidad(idUsuario);
+        Carrera carreraSecundaria = obtenerCarreraActiva(
+            request.idCarreraSecundaria(),
+            "No existe la carrera secundaria con id " + request.idCarreraSecundaria(),
+            "La carrera secundaria debe estar activa"
+        );
+
+        if (carreraSecundaria.getId().equals(perfil.getIdCarreraPrincipal())) {
+            throw new BadRequestException("La carrera secundaria no puede ser igual a la carrera principal");
+        }
+
+        DobleTitulacion dobleTitulacion = dobleTitulacionRepository
+            .findByPerfilEstudianteIdUsuarioAndCarreraSecundariaId(idUsuario, carreraSecundaria.getId())
+            .map(existente -> reactivarDobleTitulacion(existente, carreraSecundaria))
+            .orElseGet(() -> nuevaDobleTitulacion(perfil, carreraSecundaria));
+
+        DobleTitulacion guardada = dobleTitulacionRepository.save(dobleTitulacion);
+        perfil.setDobleTitular(Boolean.TRUE);
+        perfilEstudianteRepository.save(perfil);
+        return usuarioMapper.toDobleTitulacionResponse(guardada);
+    }
+
+    @Transactional
+    public void eliminarDobleTitulacion(Long idUsuario, Long idDobleTitulacion) {
+        PerfilEstudiante perfil = obtenerPerfilEstudianteEntidad(idUsuario);
+        DobleTitulacion dobleTitulacion = dobleTitulacionRepository.findById(idDobleTitulacion)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "No existe la doble titulacion con id " + idDobleTitulacion
+            ));
+
+        if (!idUsuario.equals(dobleTitulacion.getPerfilEstudiante().getIdUsuario())) {
+            throw new ResourceNotFoundException("La doble titulacion no pertenece al estudiante indicado");
+        }
+
+        if (dobleTitulacion.estaActiva()) {
+            dobleTitulacion.setEstado(EstadoRegistro.INACTIVO);
+            dobleTitulacionRepository.save(dobleTitulacion);
+        }
+        sincronizarDobleTitular(perfil);
     }
 
     @Transactional
@@ -352,6 +460,66 @@ public class UsuarioService {
     private Usuario buscarUsuario(Long idUsuario) {
         return usuarioRepository.findById(idUsuario)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el usuario con id " + idUsuario));
+    }
+
+    private PerfilEstudiante obtenerPerfilEstudianteEntidad(Long idUsuario) {
+        return perfilEstudianteRepository.findById(idUsuario)
+            .orElseThrow(() -> new ResourceNotFoundException("El usuario no tiene perfil estudiante"));
+    }
+
+    private Carrera obtenerCarreraActiva(Long idCarrera, String mensajeNoExiste, String mensajeInactiva) {
+        if (idCarrera == null) {
+            throw new BadRequestException("El id de la carrera es obligatorio");
+        }
+
+        Carrera carrera = carreraRepository.findById(idCarrera)
+            .orElseThrow(() -> new ResourceNotFoundException(mensajeNoExiste));
+
+        if (!carrera.estaActivo()) {
+            throw new BadRequestException(mensajeInactiva);
+        }
+
+        return carrera;
+    }
+
+    private DobleTitulacion nuevaDobleTitulacion(PerfilEstudiante perfil, Carrera carreraSecundaria) {
+        DobleTitulacion dobleTitulacion = new DobleTitulacion();
+        dobleTitulacion.setPerfilEstudiante(perfil);
+        dobleTitulacion.setCarreraSecundaria(carreraSecundaria);
+        dobleTitulacion.setEstado(EstadoRegistro.ACTIVO);
+        return dobleTitulacion;
+    }
+
+    private DobleTitulacion reactivarDobleTitulacion(DobleTitulacion dobleTitulacion, Carrera carreraSecundaria) {
+        if (dobleTitulacion.estaActiva()) {
+            throw new DuplicateResourceException("El estudiante ya tiene registrada esa carrera secundaria");
+        }
+
+        dobleTitulacion.setCarreraSecundaria(carreraSecundaria);
+        dobleTitulacion.setFechaRegistro(java.time.LocalDate.now());
+        dobleTitulacion.setEstado(EstadoRegistro.ACTIVO);
+        return dobleTitulacion;
+    }
+
+    private void validarCarreraPrincipalNoEsSecundariaActiva(Long idUsuario, Long idCarreraPrincipal) {
+        if (dobleTitulacionRepository.existsByPerfilEstudianteIdUsuarioAndCarreraSecundariaIdAndEstado(
+            idUsuario,
+            idCarreraPrincipal,
+            EstadoRegistro.ACTIVO
+        )) {
+            throw new BadRequestException(
+                "La carrera principal no puede coincidir con una doble titulacion activa"
+            );
+        }
+    }
+
+    private void sincronizarDobleTitular(PerfilEstudiante perfil) {
+        boolean tieneDobleTitulacionActiva = dobleTitulacionRepository.existsByPerfilEstudianteIdUsuarioAndEstado(
+            perfil.getIdUsuario(),
+            EstadoRegistro.ACTIVO
+        );
+        perfil.setDobleTitular(tieneDobleTitulacionActiva);
+        perfilEstudianteRepository.save(perfil);
     }
 
     private void validarRolActivo(Long idUsuario, String nombreRol, String mensaje) {

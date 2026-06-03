@@ -9,16 +9,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import ni.edu.uam.innovacion.common.enums.EstadoRegistro;
 import ni.edu.uam.innovacion.common.exception.BadRequestException;
 import ni.edu.uam.innovacion.common.exception.DuplicateResourceException;
+import ni.edu.uam.innovacion.common.exception.ResourceNotFoundException;
+import ni.edu.uam.innovacion.modules.catalog.entity.Carrera;
+import ni.edu.uam.innovacion.modules.catalog.entity.Facultad;
+import ni.edu.uam.innovacion.modules.catalog.repository.CarreraRepository;
+import ni.edu.uam.innovacion.modules.catalog.repository.FacultadRepository;
 import ni.edu.uam.innovacion.modules.catalog.service.RolService;
+import ni.edu.uam.innovacion.modules.user.dto.ActualizarPerfilEstudianteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.AsignarRolRequest;
+import ni.edu.uam.innovacion.modules.user.dto.CrearDobleTitulacionRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilAdministradorRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilDocenteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilEstudianteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilMentorRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearPerfilParticipanteExternoRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CrearUsuarioRequest;
+import ni.edu.uam.innovacion.modules.user.dto.DobleTitulacionResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilAdministradorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilDocenteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilEstudianteResponse;
@@ -50,6 +59,12 @@ class UsuarioServiceIntegrationTests {
 
     @Autowired
     private UsuarioRolRepository usuarioRolRepository;
+
+    @Autowired
+    private FacultadRepository facultadRepository;
+
+    @Autowired
+    private CarreraRepository carreraRepository;
 
     @Test
     void creaUsuarioConContrasenaHasheada() {
@@ -135,10 +150,11 @@ class UsuarioServiceIntegrationTests {
     @Test
     void rechazaPerfilEstudianteSinRolEstudiante() {
         UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("sin-rol-estudiante"));
+        Carrera carrera = crearCarrera("sin-rol-estudiante");
 
         assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilEstudiante(
             usuario.idUsuario(),
-            new CrearPerfilEstudianteRequest("CIF-SIN-ROL", "sin-rol@uam.edu.ni", null, false)
+            new CrearPerfilEstudianteRequest("CIF-SIN-ROL", "sin-rol@uam.edu.ni", carrera.getId())
         ));
     }
 
@@ -155,19 +171,170 @@ class UsuarioServiceIntegrationTests {
     @Test
     void creaYConsultaPerfilEstudiante() {
         UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("perfil-estudiante"));
+        Carrera carrera = crearCarrera("perfil-estudiante");
         usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("estudiante"));
 
         PerfilEstudianteResponse creado = usuarioService.crearPerfilEstudiante(
             usuario.idUsuario(),
-            new CrearPerfilEstudianteRequest("CIF-ESTUDIANTE", "perfil-estudiante@uam.edu.ni", null, true)
+            new CrearPerfilEstudianteRequest("CIF-ESTUDIANTE", "perfil-estudiante@uam.edu.ni", carrera.getId())
         );
         PerfilEstudianteResponse consultado = usuarioService.obtenerPerfilEstudiante(usuario.idUsuario());
 
         assertEquals(usuario.idUsuario(), creado.idUsuario());
         assertEquals("CIF-ESTUDIANTE", creado.cif());
-        assertNull(creado.idCarreraPrincipal());
-        assertEquals(Boolean.TRUE, creado.dobleTitular());
+        assertEquals(carrera.getId(), creado.idCarreraPrincipal());
+        assertEquals(Boolean.FALSE, creado.dobleTitular());
         assertEquals(creado, consultado);
+    }
+
+    @Test
+    void rechazaCrearPerfilEstudianteSinCarreraPrincipal() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("sin-carrera-principal"));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("estudiante"));
+
+        assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilEstudiante(
+            usuario.idUsuario(),
+            new CrearPerfilEstudianteRequest("CIF-SIN-CARRERA", "sin-carrera@uam.edu.ni", null)
+        ));
+    }
+
+    @Test
+    void rechazaPerfilEstudianteConCarreraInexistente() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("carrera-inexistente"));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("estudiante"));
+
+        assertThrows(ResourceNotFoundException.class, () -> usuarioService.crearPerfilEstudiante(
+            usuario.idUsuario(),
+            new CrearPerfilEstudianteRequest("CIF-CARRERA-404", "carrera-404@uam.edu.ni", 999_999L)
+        ));
+    }
+
+    @Test
+    void rechazaPerfilEstudianteConCarreraInactiva() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("carrera-inactiva"));
+        Carrera carrera = crearCarrera("carrera-inactiva");
+        carrera.inactivar();
+        carreraRepository.save(carrera);
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("estudiante"));
+
+        assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilEstudiante(
+            usuario.idUsuario(),
+            new CrearPerfilEstudianteRequest("CIF-CARRERA-INACTIVA", "carrera-inactiva@uam.edu.ni", carrera.getId())
+        ));
+    }
+
+    @Test
+    void creaDobleTitulacionValidaYSincronizaPerfil() {
+        UsuarioResponse usuario = crearUsuarioEstudianteConPerfil("doble-valida");
+        Carrera carreraSecundaria = crearCarrera("doble-secundaria");
+
+        DobleTitulacionResponse doble = usuarioService.crearDobleTitulacion(
+            usuario.idUsuario(),
+            new CrearDobleTitulacionRequest(carreraSecundaria.getId())
+        );
+
+        PerfilEstudianteResponse perfil = usuarioService.obtenerPerfilEstudiante(usuario.idUsuario());
+        List<DobleTitulacionResponse> dobles = usuarioService.listarDobleTitulaciones(usuario.idUsuario());
+
+        assertNotNull(doble.idDobleTitulacion());
+        assertEquals(usuario.idUsuario(), doble.idEstudiante());
+        assertEquals(carreraSecundaria.getId(), doble.idCarreraSecundaria());
+        assertEquals(EstadoRegistro.ACTIVO, doble.estado());
+        assertEquals(Boolean.TRUE, perfil.dobleTitular());
+        assertEquals(1, dobles.size());
+    }
+
+    @Test
+    void rechazaDobleTitulacionDuplicada() {
+        UsuarioResponse usuario = crearUsuarioEstudianteConPerfil("doble-duplicada");
+        Carrera carreraSecundaria = crearCarrera("doble-duplicada-secundaria");
+        CrearDobleTitulacionRequest request = new CrearDobleTitulacionRequest(carreraSecundaria.getId());
+
+        usuarioService.crearDobleTitulacion(usuario.idUsuario(), request);
+
+        assertThrows(DuplicateResourceException.class, () -> usuarioService.crearDobleTitulacion(
+            usuario.idUsuario(),
+            request
+        ));
+    }
+
+    @Test
+    void rechazaDobleTitulacionConCarreraPrincipal() {
+        Carrera carreraPrincipal = crearCarrera("doble-misma-principal");
+        UsuarioResponse usuario = crearUsuarioEstudianteConPerfil("doble-misma", carreraPrincipal);
+
+        assertThrows(BadRequestException.class, () -> usuarioService.crearDobleTitulacion(
+            usuario.idUsuario(),
+            new CrearDobleTitulacionRequest(carreraPrincipal.getId())
+        ));
+    }
+
+    @Test
+    void eliminaDobleTitulacionYSincronizaPerfil() {
+        UsuarioResponse usuario = crearUsuarioEstudianteConPerfil("doble-eliminar");
+        Carrera carreraSecundaria = crearCarrera("doble-eliminar-secundaria");
+        DobleTitulacionResponse doble = usuarioService.crearDobleTitulacion(
+            usuario.idUsuario(),
+            new CrearDobleTitulacionRequest(carreraSecundaria.getId())
+        );
+
+        usuarioService.eliminarDobleTitulacion(usuario.idUsuario(), doble.idDobleTitulacion());
+
+        PerfilEstudianteResponse perfil = usuarioService.obtenerPerfilEstudiante(usuario.idUsuario());
+        List<DobleTitulacionResponse> dobles = usuarioService.listarDobleTitulaciones(usuario.idUsuario());
+
+        assertEquals(Boolean.FALSE, perfil.dobleTitular());
+        assertTrue(dobles.isEmpty());
+    }
+
+    @Test
+    void actualizaPerfilEstudiante() {
+        UsuarioResponse usuario = crearUsuarioEstudianteConPerfil("actualiza-estudiante");
+        Carrera nuevaCarrera = crearCarrera("actualiza-estudiante-nueva");
+
+        PerfilEstudianteResponse actualizado = usuarioService.actualizarPerfilEstudiante(
+            usuario.idUsuario(),
+            new ActualizarPerfilEstudianteRequest(
+                "CIF-ACTUALIZADO",
+                "actualizado-estudiante@uam.edu.ni",
+                nuevaCarrera.getId()
+            )
+        );
+        UsuarioResponse usuarioActualizado = usuarioService.obtenerUsuario(usuario.idUsuario());
+
+        assertEquals("CIF-ACTUALIZADO", actualizado.cif());
+        assertEquals("actualizado-estudiante@uam.edu.ni", actualizado.correoInstitucional());
+        assertEquals(nuevaCarrera.getId(), actualizado.idCarreraPrincipal());
+        assertEquals(Boolean.FALSE, actualizado.dobleTitular());
+        assertEquals(actualizado, usuarioActualizado.perfilEstudiante());
+        assertEquals("estudiante", usuarioActualizado.roles().get(0).getNombre());
+        assertEquals(EstadoRegistro.ACTIVO, usuarioActualizado.roles().get(0).getEstado());
+    }
+
+    @Test
+    void rechazaActualizarPerfilEstudianteConCifOCorreoDuplicado() {
+        UsuarioResponse primerUsuario = crearUsuarioEstudianteConPerfil("duplicado-estudiante-uno");
+        UsuarioResponse segundoUsuario = crearUsuarioEstudianteConPerfil("duplicado-estudiante-dos");
+        Carrera carrera = crearCarrera("duplicado-estudiante-nueva");
+        PerfilEstudianteResponse primerPerfil = usuarioService.obtenerPerfilEstudiante(primerUsuario.idUsuario());
+
+        assertThrows(DuplicateResourceException.class, () -> usuarioService.actualizarPerfilEstudiante(
+            segundoUsuario.idUsuario(),
+            new ActualizarPerfilEstudianteRequest(
+                primerPerfil.cif(),
+                "correo-unico-duplicado@uam.edu.ni",
+                carrera.getId()
+            )
+        ));
+
+        assertThrows(DuplicateResourceException.class, () -> usuarioService.actualizarPerfilEstudiante(
+            segundoUsuario.idUsuario(),
+            new ActualizarPerfilEstudianteRequest(
+                "CIF-UNICO-DUPLICADO",
+                primerPerfil.correoInstitucional(),
+                carrera.getId()
+            )
+        ));
     }
 
     @Test
@@ -311,6 +478,43 @@ class UsuarioServiceIntegrationTests {
             "F",
             "M"
         );
+    }
+
+    private UsuarioResponse crearUsuarioEstudianteConPerfil(String sufijo) {
+        return crearUsuarioEstudianteConPerfil(sufijo, crearCarrera(sufijo + "-principal"));
+    }
+
+    private UsuarioResponse crearUsuarioEstudianteConPerfil(String sufijo, Carrera carreraPrincipal) {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest(sufijo));
+        usuarioService.asignarRol(usuario.idUsuario(), new AsignarRolRequest("estudiante"));
+        usuarioService.crearPerfilEstudiante(
+            usuario.idUsuario(),
+            new CrearPerfilEstudianteRequest(
+                "CIF-" + codigoUnico(sufijo),
+                "perfil-" + codigoUnico(sufijo) + "@uam.edu.ni",
+                carreraPrincipal.getId()
+            )
+        );
+        return usuario;
+    }
+
+    private Carrera crearCarrera(String sufijo) {
+        String codigo = codigoUnico(sufijo);
+        Facultad facultad = facultadRepository.save(new Facultad(
+            "Facultad " + sufijo,
+            "Facultad de prueba",
+            "FAC" + codigo
+        ));
+        return carreraRepository.save(new Carrera(
+            "Carrera " + sufijo,
+            "Carrera de prueba",
+            "CAR" + codigo,
+            facultad
+        ));
+    }
+
+    private String codigoUnico(String valor) {
+        return Integer.toUnsignedString(valor.hashCode());
     }
 
     private CrearPerfilDocenteRequest perfilDocenteRequest() {

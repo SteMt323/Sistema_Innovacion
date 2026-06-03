@@ -2,16 +2,19 @@ package ni.edu.uam.innovacion.modules.user.mapper;
 
 import java.util.Comparator;
 import java.util.List;
+import ni.edu.uam.innovacion.modules.catalog.dto.RolResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilAdministradorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilDocenteResponse;
+import ni.edu.uam.innovacion.modules.user.dto.DobleTitulacionResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilEstudianteResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilMentorResponse;
 import ni.edu.uam.innovacion.modules.user.dto.PerfilParticipanteExternoResponse;
-import ni.edu.uam.innovacion.modules.user.dto.RolResponse;
 import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
+import ni.edu.uam.innovacion.modules.catalog.entity.Carrera;
 import ni.edu.uam.innovacion.modules.catalog.entity.Rol;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilAdministrador;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilDocente;
+import ni.edu.uam.innovacion.modules.user.entity.DobleTitulacion;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilEstudiante;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilMentor;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilParticipanteExterno;
@@ -44,7 +47,22 @@ public class UsuarioMapper {
     }
 
     public RolResponse toRolResponse(Rol rol) {
-        return new RolResponse(rol.getId(), rol.getNombre(), rol.getDescripcion());
+        return new RolResponse(rol.getId(), rol.getNombre(), rol.getDescripcion(), rol.getEstado());
+    }
+
+    public DobleTitulacionResponse toDobleTitulacionResponse(DobleTitulacion dobleTitulacion) {
+        Carrera carrera = dobleTitulacion.getCarreraSecundaria();
+        return new DobleTitulacionResponse(
+            dobleTitulacion.getIdDobleTitulacion(),
+            dobleTitulacion.getPerfilEstudiante().getIdUsuario(),
+            carrera.getId(),
+            carrera.getNombre(),
+            carrera.getCodigo(),
+            carrera.getFacultad().getId(),
+            carrera.getFacultad().getNombre(),
+            dobleTitulacion.getFechaRegistro(),
+            dobleTitulacion.getEstado()
+        );
     }
 
     public PerfilEstudianteResponse toPerfilEstudianteResponse(PerfilEstudiante perfil) {

@@ -7,4 +7,8 @@ public interface PerfilEstudianteRepository extends JpaRepository<PerfilEstudian
     boolean existsByCifIgnoreCase(String cif);
 
     boolean existsByCorreoInstitucionalIgnoreCase(String correoInstitucional);
+
+    boolean existsByCifIgnoreCaseAndIdUsuarioNot(String cif, Long idUsuario);
+
+    boolean existsByCorreoInstitucionalIgnoreCaseAndIdUsuarioNot(String correoInstitucional, Long idUsuario);
 }

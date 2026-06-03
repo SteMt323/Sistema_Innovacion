@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Setter;
 import ni.edu.uam.innovacion.common.entity.BaseCatalog;
 import ni.edu.uam.innovacion.common.entity.BaseModel;
 
@@ -59,7 +58,6 @@ public class Carrera extends BaseCatalog {
      * automáticamente hasta que sea necesaria.
      */
 
-    @Setter
     @NotNull(message = "La facultad de la carrera es obligatoria")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_facultad", nullable = false)
