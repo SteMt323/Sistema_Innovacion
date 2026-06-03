@@ -45,7 +45,7 @@ public class ActividadService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    public ActividadResponse crear(CrearActividadRequest request) {
+    public ActividadResponse crear(CrearActividadRequest request, Long idAdministradorAutenticado) {
         validarDatosBasicos(
             request.nombre(),
             request.fechaInicio(),
@@ -59,7 +59,7 @@ public class ActividadService {
         CategoriaDIEM categoriaDiem = obtenerCategoriaActivaSiAplica(request.idCategoriaDiem());
         validarCategoriaParaAmbito(ambitoActividad, categoriaDiem);
 
-        PerfilAdministrador administradorCreador = obtenerAdministrador(request.idAdministradorCreador());
+        PerfilAdministrador administradorCreador = obtenerAdministrador(idAdministradorAutenticado);
         Usuario responsableUsuario = obtenerUsuarioSiAplica(request.idResponsableUsuario());
 
         Actividad actividad = ActividadMapper.toEntity(

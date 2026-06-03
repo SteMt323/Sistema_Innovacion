@@ -59,7 +59,6 @@ class ActividadServiceIntegrationTests {
         ActividadResponse response = actividadService.crear(new CrearActividadRequest(
             diem.getId(),
             categoria.getId(),
-            administrador.getIdUsuario(),
             responsable.getIdUsuario(),
             "Hackathon UAM",
             "Actividad de innovacion",
@@ -70,7 +69,7 @@ class ActividadServiceIntegrationTests {
             "Auditorio",
             "Equipo DIEM",
             20
-        ));
+        ), administrador.getIdUsuario());
 
         assertNotNull(response.idActividad());
         assertEquals("Hackathon UAM", response.nombre());
@@ -88,9 +87,9 @@ class ActividadServiceIntegrationTests {
         AmbitoActividad diem = crearAmbito("DIEM", true);
         PerfilAdministrador administrador = crearAdministrador("diem-sin-categoria");
 
-        CrearActividadRequest request = actividadRequest(diem, null, administrador, "diem-sin-categoria");
+        CrearActividadRequest request = actividadRequest(diem, null, "diem-sin-categoria");
 
-        assertThrows(BadRequestException.class, () -> actividadService.crear(request));
+        assertThrows(BadRequestException.class, () -> actividadService.crear(request, administrador.getIdUsuario()));
     }
 
     @Test
@@ -100,9 +99,9 @@ class ActividadServiceIntegrationTests {
         CategoriaDIEM categoria = crearCategoria("Concurso", diem);
         PerfilAdministrador administrador = crearAdministrador("externa-con-categoria");
 
-        CrearActividadRequest request = actividadRequest(externa, categoria, administrador, "externa-con-categoria");
+        CrearActividadRequest request = actividadRequest(externa, categoria, "externa-con-categoria");
 
-        assertThrows(BadRequestException.class, () -> actividadService.crear(request));
+        assertThrows(BadRequestException.class, () -> actividadService.crear(request, administrador.getIdUsuario()));
     }
 
     @Test
@@ -115,11 +114,10 @@ class ActividadServiceIntegrationTests {
         CrearActividadRequest request = actividadRequest(
             diem,
             categoriaDeOtroAmbito,
-            administrador,
             "categoria-otro-ambito"
         );
 
-        assertThrows(BadRequestException.class, () -> actividadService.crear(request));
+        assertThrows(BadRequestException.class, () -> actividadService.crear(request, administrador.getIdUsuario()));
     }
 
     @Test
@@ -132,7 +130,6 @@ class ActividadServiceIntegrationTests {
         assertThrows(BadRequestException.class, () -> actividadService.crear(new CrearActividadRequest(
             diem.getId(),
             categoria.getId(),
-            administrador.getIdUsuario(),
             null,
             "Actividad fechas invalidas",
             null,
@@ -143,12 +140,11 @@ class ActividadServiceIntegrationTests {
             "Aula",
             null,
             5
-        )));
+        ), administrador.getIdUsuario()));
 
         assertThrows(BadRequestException.class, () -> actividadService.crear(new CrearActividadRequest(
             diem.getId(),
             categoria.getId(),
-            administrador.getIdUsuario(),
             null,
             "Actividad cupo invalido",
             null,
@@ -159,12 +155,11 @@ class ActividadServiceIntegrationTests {
             "Aula",
             null,
             5
-        )));
+        ), administrador.getIdUsuario()));
 
         assertThrows(BadRequestException.class, () -> actividadService.crear(new CrearActividadRequest(
             diem.getId(),
             categoria.getId(),
-            administrador.getIdUsuario(),
             null,
             "Actividad puntos invalidos",
             null,
@@ -175,7 +170,7 @@ class ActividadServiceIntegrationTests {
             "Aula",
             null,
             -1
-        )));
+        ), administrador.getIdUsuario()));
     }
 
     @Test
@@ -184,7 +179,10 @@ class ActividadServiceIntegrationTests {
         AmbitoActividad externa = crearAmbito("EXTERNA", false);
         CategoriaDIEM categoria = crearCategoria("Evento", diem);
         PerfilAdministrador administrador = crearAdministrador("actualiza");
-        ActividadResponse creada = actividadService.crear(actividadRequest(diem, categoria, administrador, "actualiza"));
+        ActividadResponse creada = actividadService.crear(
+            actividadRequest(diem, categoria, "actualiza"),
+            administrador.getIdUsuario()
+        );
 
         ActividadResponse actualizada = actividadService.actualizar(
             creada.idActividad(),
@@ -217,7 +215,10 @@ class ActividadServiceIntegrationTests {
         AmbitoActividad diem = crearAmbito("DIEM", true);
         CategoriaDIEM categoria = crearCategoria("Concurso", diem);
         PerfilAdministrador administrador = crearAdministrador("transiciones");
-        ActividadResponse creada = actividadService.crear(actividadRequest(diem, categoria, administrador, "transiciones"));
+        ActividadResponse creada = actividadService.crear(
+            actividadRequest(diem, categoria, "transiciones"),
+            administrador.getIdUsuario()
+        );
 
         assertEquals(EstadoActividad.BORRADOR, creada.estado());
         assertTrue(actividadService.listarDisponibles().isEmpty());
@@ -262,13 +263,11 @@ class ActividadServiceIntegrationTests {
     private CrearActividadRequest actividadRequest(
         AmbitoActividad ambitoActividad,
         CategoriaDIEM categoriaDiem,
-        PerfilAdministrador administrador,
         String sufijo
     ) {
         return new CrearActividadRequest(
             ambitoActividad.getId(),
             categoriaDiem == null ? null : categoriaDiem.getId(),
-            administrador.getIdUsuario(),
             null,
             "Actividad " + sufijo,
             "Descripcion " + sufijo,
