@@ -8,6 +8,8 @@ import ni.edu.uam.innovacion.modules.activity.dto.ActualizarActividadRequest;
 import ni.edu.uam.innovacion.modules.activity.dto.CrearActividadRequest;
 import ni.edu.uam.innovacion.modules.activity.service.ActividadService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,8 +30,11 @@ public class ActividadAdminController {
     }
 
     @PostMapping
-    public ResponseEntity<ActividadResponse> crear(@Valid @RequestBody CrearActividadRequest request) {
-        ActividadResponse response = actividadService.crear(request);
+    public ResponseEntity<ActividadResponse> crear(
+        @AuthenticationPrincipal Jwt jwt,
+        @Valid @RequestBody CrearActividadRequest request
+    ) {
+        ActividadResponse response = actividadService.crear(request, obtenerIdUsuario(jwt));
         return ResponseEntity
             .created(URI.create("/api/admin/actividades/" + response.idActividad()))
             .body(response);
@@ -76,5 +81,10 @@ public class ActividadAdminController {
     @PatchMapping("/{idActividad}/archivar")
     public ActividadResponse archivar(@PathVariable Long idActividad) {
         return actividadService.archivar(idActividad);
+    }
+
+    private Long obtenerIdUsuario(Jwt jwt) {
+        Number idUsuario = jwt.getClaim("idUsuario");
+        return idUsuario.longValue();
     }
 }

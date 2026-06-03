@@ -16,10 +16,6 @@ public record CrearActividadRequest(
     @Positive(message = "El id de la categoria DIEM debe ser positivo")
     Long idCategoriaDiem,
 
-    @NotNull(message = "El administrador creador es obligatorio")
-    @Positive(message = "El id del administrador creador debe ser positivo")
-    Long idAdministradorCreador,
-
     @Positive(message = "El id del responsable debe ser positivo")
     Long idResponsableUsuario,
 
