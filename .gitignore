@@ -32,4 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 
-Pendientes/.
+
+### Just for context ###
+repomix-output.xml
