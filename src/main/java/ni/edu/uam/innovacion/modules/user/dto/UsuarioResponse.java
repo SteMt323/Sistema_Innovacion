@@ -2,6 +2,7 @@ package ni.edu.uam.innovacion.modules.user.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import ni.edu.uam.innovacion.modules.catalog.dto.RolResponse;
 import ni.edu.uam.innovacion.modules.user.enums.EstadoUsuario;
 
 public record UsuarioResponse(
