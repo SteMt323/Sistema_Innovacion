@@ -6,7 +6,9 @@ import ni.edu.uam.innovacion.modules.auth.dto.AuthenticatedUserResponse;
 import ni.edu.uam.innovacion.modules.auth.dto.LoginRequest;
 import ni.edu.uam.innovacion.modules.auth.dto.LoginResponse;
 import ni.edu.uam.innovacion.modules.auth.service.AuthService;
+import ni.edu.uam.innovacion.modules.auth.service.TokenRevocationService;
 import ni.edu.uam.innovacion.modules.user.enums.EstadoUsuario;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,14 +22,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final TokenRevocationService tokenRevocationService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, TokenRevocationService tokenRevocationService) {
         this.authService = authService;
+        this.tokenRevocationService = tokenRevocationService;
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal Jwt jwt) {
+        tokenRevocationService.revocar(jwt);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

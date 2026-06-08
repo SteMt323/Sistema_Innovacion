@@ -1,5 +1,6 @@
 package ni.edu.uam.innovacion;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -163,6 +164,106 @@ class AuthIntegrationTests {
     }
 
     @Test
+    void logoutRevocaTokenYRequiereAutenticacion() throws Exception {
+        Usuario admin = crearUsuario("logout", EstadoUsuario.ACTIVO);
+        asignarRol(admin, "administrador");
+        String token = login(admin.getCorreo());
+
+        mockMvc.perform(post("/api/auth/logout")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/auth/me")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/admin/actividades")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/logout"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void asignacionDeRolesRequiereAdmin() throws Exception {
+        Usuario objetivo = crearUsuario("roles-protegido", EstadoUsuario.ACTIVO);
+        Usuario estudiante = crearUsuario("roles-estudiante", EstadoUsuario.ACTIVO);
+        asignarRol(estudiante, "estudiante");
+        String tokenEstudiante = login(estudiante.getCorreo());
+
+        mockMvc.perform(post("/api/admin/usuarios/{idUsuario}/roles", objetivo.getIdUsuario())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(rolBody("estudiante")))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/admin/usuarios/{idUsuario}/roles", objetivo.getIdUsuario())
+                .header("Authorization", "Bearer " + tokenEstudiante)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(rolBody("estudiante")))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminAsignaYReactivaRolExistente() throws Exception {
+        Usuario admin = crearUsuario("roles-admin", EstadoUsuario.ACTIVO);
+        asignarRol(admin, "administrador");
+        String tokenAdmin = login(admin.getCorreo());
+        Usuario objetivo = crearUsuario("roles-objetivo", EstadoUsuario.ACTIVO);
+
+        mockMvc.perform(post("/api/admin/usuarios/{idUsuario}/roles", objetivo.getIdUsuario())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(rolBody("estudiante")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.idUsuario").value(objetivo.getIdUsuario()))
+            .andExpect(jsonPath("$.roles[0].nombre").value("estudiante"))
+            .andExpect(jsonPath("$.perfilEstudiante").doesNotExist());
+
+        UsuarioRol asignacion = usuarioRolRepository
+            .findByUsuarioIdUsuarioAndRolNombreIgnoreCase(objetivo.getIdUsuario(), "estudiante")
+            .orElseThrow();
+        asignacion.setActivo(Boolean.FALSE);
+        usuarioRolRepository.saveAndFlush(asignacion);
+
+        mockMvc.perform(post("/api/admin/usuarios/{idUsuario}/roles", objetivo.getIdUsuario())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(rolBody("estudiante")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.roles[0].nombre").value("estudiante"));
+
+        assertTrue(usuarioRolRepository.existsByUsuarioIdUsuarioAndRolNombreIgnoreCaseAndActivoTrue(
+            objetivo.getIdUsuario(),
+            "estudiante"
+        ));
+    }
+
+    @Test
+    void adminNoPuedeAsignarRolInexistenteOInactivo() throws Exception {
+        Usuario admin = crearUsuario("roles-validacion-admin", EstadoUsuario.ACTIVO);
+        asignarRol(admin, "administrador");
+        String tokenAdmin = login(admin.getCorreo());
+        Usuario objetivo = crearUsuario("roles-validacion-objetivo", EstadoUsuario.ACTIVO);
+
+        mockMvc.perform(post("/api/admin/usuarios/{idUsuario}/roles", objetivo.getIdUsuario())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(rolBody("no_existe")))
+            .andExpect(status().isNotFound());
+
+        Rol rolInactivo = rolRepository.findByNombreIgnoreCase("docente").orElseThrow();
+        rolInactivo.inactivar();
+        rolRepository.saveAndFlush(rolInactivo);
+
+        mockMvc.perform(post("/api/admin/usuarios/{idUsuario}/roles", objetivo.getIdUsuario())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(rolBody("docente")))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void crearActividadUsaAdministradorAutenticado() throws Exception {
         Usuario admin = crearUsuario("crear-actividad-auth", EstadoUsuario.ACTIVO);
         asignarRol(admin, "administrador");
@@ -219,6 +320,12 @@ class AuthIntegrationTests {
         return """
             {"correo":"%s","contrasena":"%s"}
             """.formatted(correo, contrasena);
+    }
+
+    private String rolBody(String nombreRol) {
+        return """
+            {"nombreRol":"%s"}
+            """.formatted(nombreRol);
     }
 
     private String actividadBody(Map<String, Object> body) {
