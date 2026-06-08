@@ -177,6 +177,9 @@ public class UsuarioService {
         String nombreRol = normalizarNombreRol(request.nombreRol());
         Rol rol = rolRepository.findByNombreIgnoreCase(nombreRol)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el rol " + nombreRol));
+        if (!rol.estaActivo()) {
+            throw new BadRequestException("El rol " + nombreRol + " debe estar activo");
+        }
 
         UsuarioRol usuarioRol = usuarioRolRepository
             .findByUsuarioIdUsuarioAndRolNombreIgnoreCase(idUsuario, nombreRol)
