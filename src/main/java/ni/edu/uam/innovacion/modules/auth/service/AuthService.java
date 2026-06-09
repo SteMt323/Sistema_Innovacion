@@ -3,6 +3,7 @@ package ni.edu.uam.innovacion.modules.auth.service;
 import java.time.Instant;
 import java.util.List;
 import ni.edu.uam.innovacion.common.exception.UnauthorizedException;
+import ni.edu.uam.innovacion.modules.auth.config.JwtProperties;
 import ni.edu.uam.innovacion.modules.auth.dto.AuthenticatedUserResponse;
 import ni.edu.uam.innovacion.modules.auth.dto.LoginRequest;
 import ni.edu.uam.innovacion.modules.auth.dto.LoginResponse;
@@ -11,7 +12,6 @@ import ni.edu.uam.innovacion.modules.user.entity.Usuario;
 import ni.edu.uam.innovacion.modules.user.entity.UsuarioRol;
 import ni.edu.uam.innovacion.modules.user.enums.EstadoUsuario;
 import ni.edu.uam.innovacion.modules.user.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -36,12 +36,12 @@ public class AuthService {
         UsuarioRepository usuarioRepository,
         PasswordEncoder passwordEncoder,
         JwtEncoder jwtEncoder,
-        @Value("${app.security.jwt.expiration-minutes}") long expirationMinutes
+        JwtProperties jwtProperties
     ) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
-        this.expirationMinutes = expirationMinutes;
+        this.expirationMinutes = jwtProperties.getExpirationMinutes();
     }
 
     @Transactional(readOnly = true)

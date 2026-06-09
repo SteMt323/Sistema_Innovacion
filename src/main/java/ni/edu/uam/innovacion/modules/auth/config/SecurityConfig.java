@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -34,10 +33,10 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    private final String jwtSecret;
+    private final JwtProperties jwtProperties;
 
-    public SecurityConfig(@Value("${app.security.jwt.secret}") String jwtSecret) {
-        this.jwtSecret = jwtSecret;
+    public SecurityConfig(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
     }
 
     @Bean
@@ -114,7 +113,7 @@ public class SecurityConfig {
     }
 
     private SecretKey secretKey() {
-        return new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        return new SecretKeySpec(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     }
 
     private void writeError(
