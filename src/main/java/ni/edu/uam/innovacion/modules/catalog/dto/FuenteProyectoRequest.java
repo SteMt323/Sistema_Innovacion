@@ -3,31 +3,25 @@ package ni.edu.uam.innovacion.modules.catalog.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import ni.edu.uam.innovacion.common.enums.CategoriaFuenteProyecto;
 
 /**
- * DTO usado para crear o actualizar una fuente de proyecto.
+ * DTO utilizado para recibir los datos necesarios
+ * al crear o actualizar una fuente de proyecto.
+ *
+ * La fuente de proyecto debe estar asociada a una categoría
+ * registrada en el catálogo CategoriaFuenteProyecto.
  */
 public class FuenteProyectoRequest {
 
-    /**
-     * Nombre de la fuente del proyecto.
-     */
-    @NotBlank(message = "El nombre de la fuente del proyecto es obligatorio")
-    @Size(max = 120, message = "El nombre de la fuente del proyecto no puede superar los 120 caracteres")
+    @NotBlank(message = "El nombre de la fuente de proyecto es obligatorio")
+    @Size(max = 120, message = "El nombre no puede superar los 120 caracteres")
     private String nombre;
 
-    /**
-     * Descripción general de la fuente del proyecto.
-     */
     @Size(max = 255, message = "La descripción no puede superar los 255 caracteres")
     private String descripcion;
 
-    /**
-     * Categoría general de la fuente del proyecto.
-     */
-    @NotNull(message = "La categoría de la fuente del proyecto es obligatoria")
-    private CategoriaFuenteProyecto categoria;
+    @NotNull(message = "La categoría de fuente de proyecto es obligatoria")
+    private Long idCategoriaFuenteProyecto;
 
     public FuenteProyectoRequest() {
     }
@@ -48,11 +42,11 @@ public class FuenteProyectoRequest {
         this.descripcion = descripcion;
     }
 
-    public CategoriaFuenteProyecto getCategoria() {
-        return categoria;
+    public Long getIdCategoriaFuenteProyecto() {
+        return idCategoriaFuenteProyecto;
     }
 
-    public void setCategoria(CategoriaFuenteProyecto categoria) {
-        this.categoria = categoria;
+    public void setIdCategoriaFuenteProyecto(Long idCategoriaFuenteProyecto) {
+        this.idCategoriaFuenteProyecto = idCategoriaFuenteProyecto;
     }
 }

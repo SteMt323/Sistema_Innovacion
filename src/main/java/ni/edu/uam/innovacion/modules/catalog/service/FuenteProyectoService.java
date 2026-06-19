@@ -1,11 +1,12 @@
 package ni.edu.uam.innovacion.modules.catalog.service;
 
-import ni.edu.uam.innovacion.common.enums.CategoriaFuenteProyecto;
 import ni.edu.uam.innovacion.common.enums.EstadoRegistro;
 import ni.edu.uam.innovacion.modules.catalog.dto.FuenteProyectoRequest;
 import ni.edu.uam.innovacion.modules.catalog.dto.FuenteProyectoResponse;
+import ni.edu.uam.innovacion.modules.catalog.entity.CategoriaFuenteProyecto;
 import ni.edu.uam.innovacion.modules.catalog.entity.FuenteProyecto;
 import ni.edu.uam.innovacion.modules.catalog.mapper.FuenteProyectoMapper;
+import ni.edu.uam.innovacion.modules.catalog.repository.CategoriaFuenteProyectoRepository;
 import ni.edu.uam.innovacion.modules.catalog.repository.FuenteProyectoRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,43 +14,32 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
- * Servicio encargado de la lógica de negocio del catálogo FuenteProyecto.
+ * Servicio encargado de la lógica de negocio del catálogo de fuentes de proyecto.
  *
- * Este catálogo permite registrar de dónde surge un proyecto dentro
- * del sistema de Innovación y Emprendimiento.
- *
- * Ejemplos:
- * - Programa PIA
- * - Hackathon Nicaragua
- * - Rally Nacional de Innovación
- * - Actividad externa
- * - Otro
- *
- * Este service aplica reglas básicas:
- *
- * - evitar fuentes de proyecto duplicadas.
- * - listar fuentes activas.
- * - filtrar fuentes por categoría.
- * - conservar historial usando estados: ACTIVO, INACTIVO y ARCHIVADO.
+ * Este catálogo permite registrar el origen específico desde donde nace
+ * o se vincula un proyecto.
  */
 @Service
 @Transactional
 public class FuenteProyectoService {
 
     private final FuenteProyectoRepository fuenteProyectoRepository;
+    private final CategoriaFuenteProyectoRepository categoriaFuenteProyectoRepository;
 
     /**
-     * Constructor para inyectar el repository.
+     * Constructor para inyectar los repositories.
      */
-    public FuenteProyectoService(FuenteProyectoRepository fuenteProyectoRepository) {
+    public FuenteProyectoService(
+            FuenteProyectoRepository fuenteProyectoRepository,
+            CategoriaFuenteProyectoRepository categoriaFuenteProyectoRepository
+    ) {
         this.fuenteProyectoRepository = fuenteProyectoRepository;
+        this.categoriaFuenteProyectoRepository = categoriaFuenteProyectoRepository;
     }
 
-    /**
-     * Lista todas las fuentes de proyecto registradas.
-     */
     @Transactional(readOnly = true)
     public List<FuenteProyectoResponse> listarTodas() {
         return fuenteProyectoRepository.findAllByOrderByNombreAsc()
@@ -58,9 +48,6 @@ public class FuenteProyectoService {
                 .toList();
     }
 
-    /**
-     * Lista únicamente las fuentes de proyecto activas.
-     */
     @Transactional(readOnly = true)
     public List<FuenteProyectoResponse> listarActivas() {
         return fuenteProyectoRepository.findByEstadoOrderByNombreAsc(EstadoRegistro.ACTIVO)
@@ -69,42 +56,33 @@ public class FuenteProyectoService {
                 .toList();
     }
 
-    /**
-     * Lista todas las fuentes de proyecto de una categoría específica.
-     */
     @Transactional(readOnly = true)
-    public List<FuenteProyectoResponse> listarPorCategoria(
-            CategoriaFuenteProyecto categoria
-    ) {
-        validarCategoria(categoria);
+    public List<FuenteProyectoResponse> listarPorCategoria(Long idCategoriaFuenteProyecto) {
+        obtenerCategoriaFuenteProyectoPorId(idCategoriaFuenteProyecto);
 
-        return fuenteProyectoRepository.findByCategoriaOrderByNombreAsc(categoria)
+        return fuenteProyectoRepository
+                .findByCategoriaFuenteProyecto_IdOrderByNombreAsc(idCategoriaFuenteProyecto)
                 .stream()
                 .map(FuenteProyectoMapper::toResponse)
                 .toList();
     }
 
-    /**
-     * Lista únicamente las fuentes activas de una categoría específica.
-     */
     @Transactional(readOnly = true)
     public List<FuenteProyectoResponse> listarActivasPorCategoria(
-            CategoriaFuenteProyecto categoria
+            Long idCategoriaFuenteProyecto
     ) {
-        validarCategoria(categoria);
+        obtenerCategoriaFuenteProyectoPorId(idCategoriaFuenteProyecto);
 
-        return fuenteProyectoRepository.findByCategoriaAndEstadoOrderByNombreAsc(
-                        categoria,
-                        EstadoRegistro.ACTIVO
+        return fuenteProyectoRepository
+                .findByEstadoAndCategoriaFuenteProyecto_IdOrderByNombreAsc(
+                        EstadoRegistro.ACTIVO,
+                        idCategoriaFuenteProyecto
                 )
                 .stream()
                 .map(FuenteProyectoMapper::toResponse)
                 .toList();
     }
 
-    /**
-     * Busca una fuente de proyecto por su id.
-     */
     @Transactional(readOnly = true)
     public FuenteProyectoResponse buscarPorId(Long id) {
         FuenteProyecto fuenteProyecto = obtenerFuenteProyectoPorId(id);
@@ -113,6 +91,11 @@ public class FuenteProyectoService {
 
     /**
      * Crea una nueva fuente de proyecto.
+     *
+     * Antes de guardar:
+     * - normaliza los datos recibidos.
+     * - valida que no exista otra fuente con el mismo nombre.
+     * - valida que la categoría indicada exista y esté activa.
      */
     public FuenteProyectoResponse crear(FuenteProyectoRequest request) {
         normalizarRequest(request);
@@ -124,7 +107,16 @@ public class FuenteProyectoService {
             );
         }
 
-        FuenteProyecto fuenteProyecto = FuenteProyectoMapper.toEntity(request);
+        CategoriaFuenteProyecto categoriaFuenteProyecto =
+                obtenerCategoriaFuenteProyectoPorId(request.getIdCategoriaFuenteProyecto());
+
+        validarCategoriaActiva(categoriaFuenteProyecto);
+
+        FuenteProyecto fuenteProyecto = FuenteProyectoMapper.toEntity(
+                request,
+                categoriaFuenteProyecto
+        );
+
         FuenteProyecto fuenteGuardada = fuenteProyectoRepository.save(fuenteProyecto);
 
         return FuenteProyectoMapper.toResponse(fuenteGuardada);
@@ -132,6 +124,8 @@ public class FuenteProyectoService {
 
     /**
      * Actualiza una fuente de proyecto existente.
+     *
+     * Valida que el nuevo nombre no pertenezca a otra fuente.
      */
     public FuenteProyectoResponse actualizar(Long id, FuenteProyectoRequest request) {
         normalizarRequest(request);
@@ -148,17 +142,32 @@ public class FuenteProyectoService {
                     }
                 });
 
-        FuenteProyectoMapper.updateEntity(fuenteProyecto, request);
+        CategoriaFuenteProyecto categoriaFuenteProyecto =
+                obtenerCategoriaFuenteProyectoPorId(request.getIdCategoriaFuenteProyecto());
+
+        validarCategoriaActiva(categoriaFuenteProyecto);
+
+        FuenteProyectoMapper.updateEntity(
+                fuenteProyecto,
+                request,
+                categoriaFuenteProyecto
+        );
 
         FuenteProyecto fuenteActualizada = fuenteProyectoRepository.save(fuenteProyecto);
+
         return FuenteProyectoMapper.toResponse(fuenteActualizada);
     }
 
     /**
      * Activa una fuente de proyecto.
+     *
+     * Para activar una fuente, su categoría también debe estar activa.
      */
     public FuenteProyectoResponse activar(Long id) {
         FuenteProyecto fuenteProyecto = obtenerFuenteProyectoPorId(id);
+
+        validarCategoriaActiva(fuenteProyecto.getCategoriaFuenteProyecto());
+
         fuenteProyecto.activar();
 
         return FuenteProyectoMapper.toResponse(
@@ -171,6 +180,7 @@ public class FuenteProyectoService {
      */
     public FuenteProyectoResponse inactivar(Long id) {
         FuenteProyecto fuenteProyecto = obtenerFuenteProyectoPorId(id);
+
         fuenteProyecto.inactivar();
 
         return FuenteProyectoMapper.toResponse(
@@ -183,6 +193,7 @@ public class FuenteProyectoService {
      */
     public FuenteProyectoResponse archivar(Long id) {
         FuenteProyecto fuenteProyecto = obtenerFuenteProyectoPorId(id);
+
         fuenteProyecto.archivar();
 
         return FuenteProyectoMapper.toResponse(
@@ -191,7 +202,9 @@ public class FuenteProyectoService {
     }
 
     /**
-     * Busca una fuente de proyecto por id.
+     * Obtiene una fuente de proyecto por id.
+     *
+     * Si no existe, retorna error 404.
      */
     private FuenteProyecto obtenerFuenteProyectoPorId(Long id) {
         return fuenteProyectoRepository.findById(id)
@@ -202,13 +215,29 @@ public class FuenteProyectoService {
     }
 
     /**
-     * Valida que la categoría no sea nula.
+     * Obtiene una categoría de fuente de proyecto por id.
+     *
+     * Si no existe, retorna error 404.
      */
-    private void validarCategoria(CategoriaFuenteProyecto categoria) {
-        if (categoria == null) {
+    private CategoriaFuenteProyecto obtenerCategoriaFuenteProyectoPorId(
+            Long idCategoriaFuenteProyecto
+    ) {
+        return categoriaFuenteProyectoRepository.findById(idCategoriaFuenteProyecto)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No se encontró la categoría de fuente de proyecto con id: "
+                                + idCategoriaFuenteProyecto
+                ));
+    }
+
+    /**
+     * Valida que la categoría de fuente de proyecto esté activa.
+     */
+    private void validarCategoriaActiva(CategoriaFuenteProyecto categoriaFuenteProyecto) {
+        if (categoriaFuenteProyecto == null || !categoriaFuenteProyecto.estaActivo()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "La categoría de la fuente del proyecto es obligatoria"
+                    "La categoría de fuente de proyecto no está activa"
             );
         }
     }
@@ -218,7 +247,11 @@ public class FuenteProyectoService {
      */
     private void normalizarRequest(FuenteProyectoRequest request) {
         if (request.getNombre() != null) {
-            request.setNombre(request.getNombre().trim());
+            request.setNombre(
+                    request.getNombre()
+                            .trim()
+                            .toUpperCase(Locale.ROOT)
+            );
         }
 
         if (request.getDescripcion() != null) {

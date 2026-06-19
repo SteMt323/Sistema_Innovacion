@@ -2,6 +2,7 @@ package ni.edu.uam.innovacion.modules.catalog.mapper;
 
 import ni.edu.uam.innovacion.modules.catalog.dto.FuenteProyectoRequest;
 import ni.edu.uam.innovacion.modules.catalog.dto.FuenteProyectoResponse;
+import ni.edu.uam.innovacion.modules.catalog.entity.CategoriaFuenteProyecto;
 import ni.edu.uam.innovacion.modules.catalog.entity.FuenteProyecto;
 
 /**
@@ -9,46 +10,50 @@ import ni.edu.uam.innovacion.modules.catalog.entity.FuenteProyecto;
  */
 public class FuenteProyectoMapper {
 
-    /*
-     * Constructor privado para evitar crear objetos de esta clase.
+    /**
+     * Constructor privado para evitar que esta clase sea instanciada.
      */
     private FuenteProyectoMapper() {
     }
 
-    /**
-     * Convierte un FuenteProyectoRequest en una entidad FuenteProyecto.
-     */
-    public static FuenteProyecto toEntity(FuenteProyectoRequest request) {
+    public static FuenteProyecto toEntity(
+            FuenteProyectoRequest request,
+            CategoriaFuenteProyecto categoriaFuenteProyecto
+    ) {
         FuenteProyecto fuenteProyecto = new FuenteProyecto();
 
-        updateEntity(fuenteProyecto, request);
+        fuenteProyecto.setNombre(request.getNombre());
+        fuenteProyecto.setDescripcion(request.getDescripcion());
+        fuenteProyecto.setCategoriaFuenteProyecto(categoriaFuenteProyecto);
 
         return fuenteProyecto;
     }
 
-    /**
-     * Convierte una entidad FuenteProyecto en un FuenteProyectoResponse.
-     */
     public static FuenteProyectoResponse toResponse(FuenteProyecto fuenteProyecto) {
+        CategoriaFuenteProyecto categoriaFuenteProyecto =
+                fuenteProyecto.getCategoriaFuenteProyecto();
+
         return new FuenteProyectoResponse(
                 fuenteProyecto.getId(),
                 fuenteProyecto.getNombre(),
                 fuenteProyecto.getDescripcion(),
-                fuenteProyecto.getCategoria(),
-                fuenteProyecto.getEstado()
+                fuenteProyecto.getEstado(),
+                categoriaFuenteProyecto != null ? categoriaFuenteProyecto.getId() : null,
+                categoriaFuenteProyecto != null ? categoriaFuenteProyecto.getNombre() : null
         );
     }
 
     /**
-     * Actualiza una entidad FuenteProyecto existente con los datos
-     * recibidos en el request.
+     * Actualiza una entidad FuenteProyecto existente
+     * usando los datos recibidos en el Request.
      */
     public static void updateEntity(
             FuenteProyecto fuenteProyecto,
-            FuenteProyectoRequest request
+            FuenteProyectoRequest request,
+            CategoriaFuenteProyecto categoriaFuenteProyecto
     ) {
         fuenteProyecto.setNombre(request.getNombre());
         fuenteProyecto.setDescripcion(request.getDescripcion());
-        fuenteProyecto.setCategoria(request.getCategoria());
+        fuenteProyecto.setCategoriaFuenteProyecto(categoriaFuenteProyecto);
     }
 }

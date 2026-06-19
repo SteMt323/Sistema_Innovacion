@@ -1,7 +1,6 @@
 package ni.edu.uam.innovacion.modules.catalog.controller;
 
 import jakarta.validation.Valid;
-import ni.edu.uam.innovacion.common.enums.CategoriaFuenteProyecto;
 import ni.edu.uam.innovacion.modules.catalog.dto.FuenteProyectoRequest;
 import ni.edu.uam.innovacion.modules.catalog.dto.FuenteProyectoResponse;
 import ni.edu.uam.innovacion.modules.catalog.service.FuenteProyectoService;
@@ -13,6 +12,16 @@ import java.util.List;
 
 /**
  * Controller REST para administrar el catálogo de fuentes de proyecto.
+ *
+ * Permite:
+ * - listar todas las fuentes de proyecto
+ * - listar solo fuentes activas
+ * - listar fuentes por categoría
+ * - listar fuentes activas por categoría
+ * - buscar fuente por id
+ * - crear fuente
+ * - actualizar fuente
+ * - activar, inactivar o archivar fuente
  */
 @RestController
 @RequestMapping("/api/admin/catalog/fuentes-proyecto")
@@ -44,26 +53,26 @@ public class FuenteProyectoController {
     }
 
     /**
-     * Lista las fuentes de proyecto por categoría.
+     * Lista las fuentes de proyecto asociadas a una categoría específica.
      */
-    @GetMapping("/categoria/{categoria}")
+    @GetMapping("/categoria/{idCategoriaFuenteProyecto}")
     public ResponseEntity<List<FuenteProyectoResponse>> listarPorCategoria(
-            @PathVariable CategoriaFuenteProyecto categoria
+            @PathVariable Long idCategoriaFuenteProyecto
     ) {
         return ResponseEntity.ok(
-                fuenteProyectoService.listarPorCategoria(categoria)
+                fuenteProyectoService.listarPorCategoria(idCategoriaFuenteProyecto)
         );
     }
 
     /**
-     * Lista únicamente las fuentes activas de una categoría específica.
+     * Lista únicamente las fuentes activas asociadas a una categoría específica.
      */
-    @GetMapping("/categoria/{categoria}/activas")
+    @GetMapping("/categoria/{idCategoriaFuenteProyecto}/activas")
     public ResponseEntity<List<FuenteProyectoResponse>> listarActivasPorCategoria(
-            @PathVariable CategoriaFuenteProyecto categoria
+            @PathVariable Long idCategoriaFuenteProyecto
     ) {
         return ResponseEntity.ok(
-                fuenteProyectoService.listarActivasPorCategoria(categoria)
+                fuenteProyectoService.listarActivasPorCategoria(idCategoriaFuenteProyecto)
         );
     }
 
