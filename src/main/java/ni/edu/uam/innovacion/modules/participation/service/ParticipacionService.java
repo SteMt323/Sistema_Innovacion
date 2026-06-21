@@ -17,6 +17,7 @@ import ni.edu.uam.innovacion.modules.participation.entity.Participacion;
 import ni.edu.uam.innovacion.modules.participation.enums.EstadoParticipacion;
 import ni.edu.uam.innovacion.modules.participation.mapper.ParticipacionMapper;
 import ni.edu.uam.innovacion.modules.participation.repository.ParticipacionRepository;
+import ni.edu.uam.innovacion.modules.points.service.PuntoInnovacionService;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilAdministrador;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilAdministradorRepository;
 import org.springframework.stereotype.Service;
@@ -30,17 +31,20 @@ public class ParticipacionService {
     private final InscripcionRepository inscripcionRepository;
     private final RolParticipacionRepository rolParticipacionRepository;
     private final PerfilAdministradorRepository perfilAdministradorRepository;
+    private final PuntoInnovacionService puntoService;
 
     public ParticipacionService(
             ParticipacionRepository participacionRepository,
             InscripcionRepository inscripcionRepository,
             RolParticipacionRepository rolParticipacionRepository,
-            PerfilAdministradorRepository perfilAdministradorRepository
+            PerfilAdministradorRepository perfilAdministradorRepository,
+            PuntoInnovacionService puntoService
     ) {
         this.participacionRepository = participacionRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.rolParticipacionRepository = rolParticipacionRepository;
         this.perfilAdministradorRepository = perfilAdministradorRepository;
+        this.puntoService = puntoService;
     }
 
     public ParticipacionResponse crear(CrearParticipacionRequest request) {
@@ -183,9 +187,9 @@ public class ParticipacionService {
         participacion.setObservaciones(obtenerObservaciones(request));
         participacion.validar(administrador);
 
-        return ParticipacionMapper.toResponse(
-                participacionRepository.save(participacion)
-        );
+        Participacion guardada = participacionRepository.save(participacion);
+        puntoService.otorgarPorParticipacion(guardada);
+        return ParticipacionMapper.toResponse(guardada);
     }
 
     public ParticipacionResponse noValidar(
@@ -205,9 +209,9 @@ public class ParticipacionService {
         participacion.setObservaciones(obtenerObservaciones(request));
         participacion.noValidar(administrador);
 
-        return ParticipacionMapper.toResponse(
-                participacionRepository.save(participacion)
-        );
+        Participacion guardada = participacionRepository.save(participacion);
+        puntoService.anularOtorgamientoPorParticipacion(guardada);
+        return ParticipacionMapper.toResponse(guardada);
     }
 
     public ParticipacionResponse anular(
@@ -225,9 +229,9 @@ public class ParticipacionService {
         participacion.setObservaciones(obtenerObservaciones(request));
         participacion.anular(administrador);
 
-        return ParticipacionMapper.toResponse(
-                participacionRepository.save(participacion)
-        );
+        Participacion guardada = participacionRepository.save(participacion);
+        puntoService.anularOtorgamientoPorParticipacion(guardada);
+        return ParticipacionMapper.toResponse(guardada);
     }
 
     public ParticipacionResponse dejarPendiente(Long idParticipacion) {
@@ -243,9 +247,9 @@ public class ParticipacionService {
 
         participacion.dejarPendiente();
 
-        return ParticipacionMapper.toResponse(
-                participacionRepository.save(participacion)
-        );
+        Participacion guardada = participacionRepository.save(participacion);
+        puntoService.anularOtorgamientoPorParticipacion(guardada);
+        return ParticipacionMapper.toResponse(guardada);
     }
 
     private Participacion obtenerParticipacion(Long idParticipacion) {
