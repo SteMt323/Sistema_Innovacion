@@ -186,6 +186,28 @@ class AuthIntegrationTests {
     }
 
     @Test
+    void crearPerfilAdministradorRequiereRolAdministrador() throws Exception {
+        Usuario objetivo = crearUsuario("perfil-admin-protegido", EstadoUsuario.ACTIVO);
+        Usuario estudiante = crearUsuario("perfil-admin-estudiante", EstadoUsuario.ACTIVO);
+        asignarRol(estudiante, "estudiante");
+        String tokenEstudiante = login(estudiante.getCorreo());
+        String body = """
+            {"cargo":"Coordinador","nivelAcceso":"total"}
+            """;
+
+        mockMvc.perform(post("/api/usuarios/{idUsuario}/perfiles/administrador", objetivo.getIdUsuario())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/usuarios/{idUsuario}/perfiles/administrador", objetivo.getIdUsuario())
+                .header("Authorization", "Bearer " + tokenEstudiante)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
     void asignacionDeRolesRequiereAdmin() throws Exception {
         Usuario objetivo = crearUsuario("roles-protegido", EstadoUsuario.ACTIVO);
         Usuario estudiante = crearUsuario("roles-estudiante", EstadoUsuario.ACTIVO);

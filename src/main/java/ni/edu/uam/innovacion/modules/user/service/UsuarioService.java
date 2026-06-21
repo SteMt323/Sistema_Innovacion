@@ -167,6 +167,17 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponse cambiarEstado(Long idUsuario, CambiarEstadoUsuarioRequest request) {
         Usuario usuario = buscarUsuario(idUsuario);
+
+        if (EstadoUsuario.ACTIVO.equals(request.estado())
+            && !EstadoUsuario.ACTIVO.equals(usuario.getEstado())
+            && usuarioRolRepository.existsByUsuarioIdUsuarioAndRolNombreIgnoreCaseAndActivoTrue(
+                idUsuario,
+                ROL_ADMINISTRADOR
+            )) {
+            bloquearRolAdministrador();
+            validarAdministradorUnico(idUsuario);
+        }
+
         usuario.setEstado(request.estado());
         return usuarioMapper.toResponse(usuarioRepository.save(usuario));
     }
@@ -179,6 +190,11 @@ public class UsuarioService {
             .orElseThrow(() -> new ResourceNotFoundException("No existe el rol " + nombreRol));
         if (!rol.estaActivo()) {
             throw new BadRequestException("El rol " + nombreRol + " debe estar activo");
+        }
+
+        if (ROL_ADMINISTRADOR.equals(nombreRol) && EstadoUsuario.ACTIVO.equals(usuario.getEstado())) {
+            rol = bloquearRolAdministrador();
+            validarAdministradorUnico(idUsuario);
         }
 
         UsuarioRol usuarioRol = usuarioRolRepository
@@ -346,6 +362,18 @@ public class UsuarioService {
     public PerfilAdministradorResponse crearPerfilAdministrador(Long idUsuario, CrearPerfilAdministradorRequest request) {
         Usuario usuario = buscarUsuario(idUsuario);
         validarRolActivo(idUsuario, ROL_ADMINISTRADOR, "Para crear perfil administrador el usuario debe tener rol administrador activo");
+
+        bloquearRolAdministrador();
+        if (EstadoUsuario.ACTIVO.equals(usuario.getEstado())) {
+            validarAdministradorUnico(idUsuario);
+            if (perfilAdministradorRepository.existsOtroPerfilAdministradorActivo(
+                idUsuario,
+                ROL_ADMINISTRADOR,
+                EstadoUsuario.ACTIVO
+            )) {
+                throw new DuplicateResourceException("Ya existe otro perfil administrador activo");
+            }
+        }
 
         if (perfilAdministradorRepository.existsById(idUsuario)) {
             throw new DuplicateResourceException("El usuario ya tiene perfil administrador");
@@ -528,6 +556,21 @@ public class UsuarioService {
     private void validarRolActivo(Long idUsuario, String nombreRol, String mensaje) {
         if (!usuarioRolRepository.existsByUsuarioIdUsuarioAndRolNombreIgnoreCaseAndActivoTrue(idUsuario, nombreRol)) {
             throw new BadRequestException(mensaje);
+        }
+    }
+
+    private Rol bloquearRolAdministrador() {
+        return rolRepository.findByNombreIgnoreCaseForUpdate(ROL_ADMINISTRADOR)
+            .orElseThrow(() -> new ResourceNotFoundException("No existe el rol " + ROL_ADMINISTRADOR));
+    }
+
+    private void validarAdministradorUnico(Long idUsuario) {
+        if (usuarioRolRepository.existsByRolNombreIgnoreCaseAndActivoTrueAndUsuarioEstadoAndUsuarioIdUsuarioNot(
+            ROL_ADMINISTRADOR,
+            EstadoUsuario.ACTIVO,
+            idUsuario
+        )) {
+            throw new DuplicateResourceException("Ya existe otro administrador activo");
         }
     }
 
