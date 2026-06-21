@@ -53,4 +53,6 @@ public interface ParticipacionRepository extends JpaRepository<Participacion, Lo
             Long idUsuario,
             EstadoParticipacion estado
     );
+
+    long countByEstado(EstadoParticipacion estado);
 }

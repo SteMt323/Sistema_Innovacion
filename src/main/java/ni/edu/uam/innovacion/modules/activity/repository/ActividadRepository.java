@@ -10,4 +10,6 @@ public interface ActividadRepository extends JpaRepository<Actividad, Long> {
     List<Actividad> findAllByOrderByFechaInicioDesc();
 
     List<Actividad> findByEstadoOrderByFechaInicioAsc(EstadoActividad estado);
+
+    long countByEstado(EstadoActividad estado);
 }

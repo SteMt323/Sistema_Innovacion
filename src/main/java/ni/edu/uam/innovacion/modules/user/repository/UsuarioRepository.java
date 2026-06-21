@@ -2,6 +2,7 @@ package ni.edu.uam.innovacion.modules.user.repository;
 
 import java.util.Optional;
 import ni.edu.uam.innovacion.modules.user.entity.Usuario;
+import ni.edu.uam.innovacion.modules.user.enums.EstadoUsuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
@@ -14,4 +15,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     boolean existsByCorreoIgnoreCaseAndIdUsuarioNot(String correo, Long idUsuario);
 
     boolean existsByDocumentoAndIdUsuarioNot(String documento, Long idUsuario);
+
+    long countByEstado(EstadoUsuario estado);
 }

@@ -86,4 +86,6 @@ public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> 
             Long idActividad,
             Collection<EstadoInscripcion> estados
     );
+
+    long countByEstado(EstadoInscripcion estado);
 }
