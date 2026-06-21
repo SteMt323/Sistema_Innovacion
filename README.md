@@ -14,6 +14,18 @@
 - En `local`, el backend tiene defaults seguros para desarrollo, incluyendo un secreto JWT local.
 - En `prod`, `JWT_SECRET` debe existir como variable de entorno y no puede usar el secreto local por defecto.
 
+## Cierre administrativo
+
+El backend incluye:
+
+- administrador activo unico y transferencia controlada;
+- historial de puntos, ajustes, anulaciones e insignias;
+- dashboard agregado y ranking;
+- reportes CSV/PDF bajo demanda;
+- constancias y certificados PDF para participaciones validadas.
+
+Ejecuta la verificacion con `mvnw.cmd test`.
+
 ## Referencias
 
 - La documentacion funcional de APIs sigue en `../docs/README.md`.
