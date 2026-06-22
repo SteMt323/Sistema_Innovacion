@@ -26,6 +26,8 @@ public record ActividadResponse(
     String responsableNombre,
     Integer puntosBase,
     LocalDateTime creadoEn,
-    LocalDateTime actualizadoEn
+    LocalDateTime actualizadoEn,
+    Integer inscritosActuales,
+    Boolean yaInscrito
 ) {
 }

@@ -29,7 +29,9 @@ public enum InsigniaPuntos {
         return new InsigniaResponse(
             actual.name().toLowerCase(),
             actual.nombre,
+            actual.nombre,
             actual.color,
+            actual.minimo,
             totalPuntos
         );
     }

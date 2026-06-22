@@ -49,6 +49,14 @@ public class ActividadMapper {
     }
 
     public static ActividadResponse toResponse(Actividad actividad) {
+        return toResponse(actividad, null, null);
+    }
+
+    public static ActividadResponse toResponse(
+        Actividad actividad,
+        Integer inscritosActuales,
+        Boolean yaInscrito
+    ) {
         AmbitoActividad ambitoActividad = actividad.getAmbitoActividad();
         CategoriaDIEM categoriaDiem = actividad.getCategoriaDiem();
         PerfilAdministrador administradorCreador = actividad.getAdministradorCreador();
@@ -77,7 +85,9 @@ public class ActividadMapper {
             actividad.getResponsableNombre(),
             actividad.getPuntosBase(),
             actividad.getCreadoEn(),
-            actividad.getActualizadoEn()
+            actividad.getActualizadoEn(),
+            inscritosActuales,
+            yaInscrito
         );
     }
 

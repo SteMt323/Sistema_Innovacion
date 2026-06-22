@@ -14,6 +14,8 @@ import ni.edu.uam.innovacion.modules.catalog.entity.AmbitoActividad;
 import ni.edu.uam.innovacion.modules.catalog.entity.CategoriaDIEM;
 import ni.edu.uam.innovacion.modules.catalog.repository.AmbitoActividadRepository;
 import ni.edu.uam.innovacion.modules.catalog.repository.CategoriaDIEMRepository;
+import ni.edu.uam.innovacion.modules.enrollment.enums.EstadoInscripcion;
+import ni.edu.uam.innovacion.modules.enrollment.repository.InscripcionRepository;
 import ni.edu.uam.innovacion.modules.user.entity.PerfilAdministrador;
 import ni.edu.uam.innovacion.modules.user.entity.Usuario;
 import ni.edu.uam.innovacion.modules.user.repository.PerfilAdministradorRepository;
@@ -30,19 +32,22 @@ public class ActividadService {
     private final CategoriaDIEMRepository categoriaDIEMRepository;
     private final PerfilAdministradorRepository perfilAdministradorRepository;
     private final UsuarioRepository usuarioRepository;
+    private final InscripcionRepository inscripcionRepository;
 
     public ActividadService(
         ActividadRepository actividadRepository,
         AmbitoActividadRepository ambitoActividadRepository,
         CategoriaDIEMRepository categoriaDIEMRepository,
         PerfilAdministradorRepository perfilAdministradorRepository,
-        UsuarioRepository usuarioRepository
+        UsuarioRepository usuarioRepository,
+        InscripcionRepository inscripcionRepository
     ) {
         this.actividadRepository = actividadRepository;
         this.ambitoActividadRepository = ambitoActividadRepository;
         this.categoriaDIEMRepository = categoriaDIEMRepository;
         this.perfilAdministradorRepository = perfilAdministradorRepository;
         this.usuarioRepository = usuarioRepository;
+        this.inscripcionRepository = inscripcionRepository;
     }
 
     public ActividadResponse crear(CrearActividadRequest request, Long idAdministradorAutenticado) {
@@ -83,9 +88,14 @@ public class ActividadService {
 
     @Transactional(readOnly = true)
     public List<ActividadResponse> listarDisponibles() {
+        return listarDisponibles(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActividadResponse> listarDisponibles(Long idUsuarioSolicitante) {
         return actividadRepository.findByEstadoOrderByFechaInicioAsc(EstadoActividad.PUBLICADA)
             .stream()
-            .map(ActividadMapper::toResponse)
+            .map(actividad -> toResponseConInscripcion(actividad, idUsuarioSolicitante))
             .toList();
     }
 
@@ -96,11 +106,34 @@ public class ActividadService {
 
     @Transactional(readOnly = true)
     public ActividadResponse buscarDisponiblePorId(Long idActividad) {
+        return buscarDisponiblePorId(idActividad, null);
+    }
+
+    @Transactional(readOnly = true)
+    public ActividadResponse buscarDisponiblePorId(Long idActividad, Long idUsuarioSolicitante) {
         Actividad actividad = obtenerActividadPorId(idActividad);
         if (!EstadoActividad.PUBLICADA.equals(actividad.getEstado())) {
             throw new ResourceNotFoundException("No existe una actividad disponible con id " + idActividad);
         }
-        return ActividadMapper.toResponse(actividad);
+        return toResponseConInscripcion(actividad, idUsuarioSolicitante);
+    }
+
+    private ActividadResponse toResponseConInscripcion(Actividad actividad, Long idUsuarioSolicitante) {
+        int inscritosActuales = (int) inscripcionRepository.countByActividad_IdActividadAndEstadoIn(
+            actividad.getIdActividad(),
+            List.of(
+                EstadoInscripcion.REGISTRADA,
+                EstadoInscripcion.PENDIENTE,
+                EstadoInscripcion.CONFIRMADA
+            )
+        );
+        Boolean yaInscrito = idUsuarioSolicitante == null
+            ? null
+            : inscripcionRepository.existsByUsuario_IdUsuarioAndActividad_IdActividad(
+                idUsuarioSolicitante,
+                actividad.getIdActividad()
+            );
+        return ActividadMapper.toResponse(actividad, inscritosActuales, yaInscrito);
     }
 
     public ActividadResponse actualizar(Long idActividad, ActualizarActividadRequest request) {
