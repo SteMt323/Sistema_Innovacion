@@ -20,6 +20,7 @@ El backend incluye:
 
 - administrador activo unico y transferencia controlada;
 - historial de puntos, ajustes, anulaciones e insignias;
+- gestion administrativa de mentores y mentorias por actividad;
 - dashboard agregado y ranking;
 - reportes CSV/PDF bajo demanda;
 - constancias y certificados PDF para participaciones validadas.

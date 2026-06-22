@@ -148,6 +148,38 @@ class AuthIntegrationTests {
             .andExpect(status().isOk());
     }
 
+    
+    @Test
+    void protegeEndpointsDeMentoriasYMentoresParaAdmins() throws Exception {
+        Usuario estudiante = crearUsuario("mentorias-estudiante", EstadoUsuario.ACTIVO);
+        asignarRol(estudiante, "estudiante");
+        String tokenEstudiante = login(estudiante.getCorreo());
+
+        Usuario admin = crearUsuario("mentorias-admin", EstadoUsuario.ACTIVO);
+        asignarRol(admin, "administrador");
+        crearPerfilAdministrador(admin);
+        String tokenAdmin = login(admin.getCorreo());
+
+        mockMvc.perform(get("/api/admin/mentorias/resumen")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/admin/mentorias/resumen")
+                .header("Authorization", "Bearer " + tokenEstudiante)
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/admin/mentorias/resumen")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.mentoriasActivas").value(0));
+
+        mockMvc.perform(get("/api/admin/mentores")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+    }
     @Test
     void authMeDevuelveDatosDelToken() throws Exception {
         Usuario admin = crearUsuario("me", EstadoUsuario.ACTIVO);
@@ -201,6 +233,34 @@ class AuthIntegrationTests {
             .andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/api/usuarios/{idUsuario}/perfiles/administrador", objetivo.getIdUsuario())
+                .header("Authorization", "Bearer " + tokenEstudiante)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isForbidden());
+    }
+    @Test
+    void crearPerfilMentorRequiereRolAdministrador() throws Exception {
+        Usuario objetivo = crearUsuario("perfil-mentor-protegido", EstadoUsuario.ACTIVO);
+        Usuario estudiante = crearUsuario("perfil-mentor-estudiante", EstadoUsuario.ACTIVO);
+        asignarRol(estudiante, "estudiante");
+        String tokenEstudiante = login(estudiante.getCorreo());
+        String body = """
+            {
+              "areaExperiencia":"Diseno estrategico",
+              "especialidad":"UX",
+              "institucion":"UAM",
+              "tipoAcompanamiento":"Mentoria grupal",
+              "gradoAcademico":"maestria",
+              "tituloUniversitario":"Maestria en innovacion"
+            }
+            """;
+
+        mockMvc.perform(post("/api/usuarios/{idUsuario}/perfiles/mentor", objetivo.getIdUsuario())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/usuarios/{idUsuario}/perfiles/mentor", objetivo.getIdUsuario())
                 .header("Authorization", "Bearer " + tokenEstudiante)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))

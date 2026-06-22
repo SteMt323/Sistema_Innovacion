@@ -15,6 +15,12 @@ public record AdminDashboardResponse(
     long participacionesNoValidadas,
     long puntosActivosOtorgados,
     long movimientosPuntosAnulados,
+    long mentoresRegistrados,
+    long mentoresActivos,
+    long mentoriasActivas,
+    long mentoriasInactivas,
+    long mentoriasArchivadas,
+    long actividadesConMentoriasActivas,
     List<TopUsuarioPuntosResponse> topUsuariosPuntos,
     List<PuntoInnovacionResponse> movimientosRecientes
 ) {
