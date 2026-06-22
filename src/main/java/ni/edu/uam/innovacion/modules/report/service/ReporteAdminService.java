@@ -170,6 +170,12 @@ public class ReporteAdminService {
         filas.add(metrica("Participaciones no validadas", resumen.participacionesNoValidadas()));
         filas.add(metrica("Puntos activos otorgados", resumen.puntosActivosOtorgados()));
         filas.add(metrica("Movimientos anulados", resumen.movimientosPuntosAnulados()));
+        filas.add(metrica("Mentores registrados", resumen.mentoresRegistrados()));
+        filas.add(metrica("Mentores activos", resumen.mentoresActivos()));
+        filas.add(metrica("Mentorias activas", resumen.mentoriasActivas()));
+        filas.add(metrica("Mentorias inactivas", resumen.mentoriasInactivas()));
+        filas.add(metrica("Mentorias archivadas", resumen.mentoriasArchivadas()));
+        filas.add(metrica("Actividades con mentorias activas", resumen.actividadesConMentoriasActivas()));
         filas.add(metrica("Movimientos en el periodo", movimientosPeriodo));
         filas.add(metrica("Participaciones procesadas en el periodo", participacionesPeriodo));
 
