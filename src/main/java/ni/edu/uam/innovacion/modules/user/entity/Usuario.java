@@ -13,6 +13,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -39,6 +40,9 @@ public class Usuario {
     @Column(name = "documento", nullable = false, length = 40)
     private String documento;
 
+    @Column(name = "cedula", length = 40)
+    private String cedula;
+
     @Column(name = "telefono", length = 30)
     private String telefono;
 
@@ -53,6 +57,9 @@ public class Usuario {
 
     @Column(name = "talla_camisa", length = 20)
     private String tallaCamisa;
+
+    @Column(name = "fecha_nacimiento")
+    private LocalDate fechaNacimiento;
 
     @Column(name = "fecha_registro", nullable = false)
     private LocalDateTime fechaRegistro;
@@ -131,6 +138,14 @@ public class Usuario {
         this.documento = documento;
     }
 
+    public String getCedula() {
+        return cedula;
+    }
+
+    public void setCedula(String cedula) {
+        this.cedula = cedula;
+    }
+
     public String getTelefono() {
         return telefono;
     }
@@ -169,6 +184,14 @@ public class Usuario {
 
     public void setTallaCamisa(String tallaCamisa) {
         this.tallaCamisa = tallaCamisa;
+    }
+
+    public LocalDate getFechaNacimiento() {
+        return fechaNacimiento;
+    }
+
+    public void setFechaNacimiento(LocalDate fechaNacimiento) {
+        this.fechaNacimiento = fechaNacimiento;
     }
 
     public LocalDateTime getFechaRegistro() {

@@ -16,5 +16,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     boolean existsByDocumentoAndIdUsuarioNot(String documento, Long idUsuario);
 
+    boolean existsByCedula(String cedula);
+
+    boolean existsByCedulaAndIdUsuarioNot(String cedula, Long idUsuario);
+
     long countByEstado(EstadoUsuario estado);
 }

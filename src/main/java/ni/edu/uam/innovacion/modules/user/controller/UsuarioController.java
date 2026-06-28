@@ -3,6 +3,8 @@ package ni.edu.uam.innovacion.modules.user.controller;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import ni.edu.uam.innovacion.common.exception.ApiException;
+import ni.edu.uam.innovacion.common.exception.UnauthorizedException;
 import ni.edu.uam.innovacion.modules.user.dto.ActualizarPerfilEstudianteRequest;
 import ni.edu.uam.innovacion.modules.user.dto.ActualizarUsuarioRequest;
 import ni.edu.uam.innovacion.modules.user.dto.CambiarContrasenaRequest;
@@ -23,6 +25,8 @@ import ni.edu.uam.innovacion.modules.user.dto.UsuarioResponse;
 import ni.edu.uam.innovacion.modules.user.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -57,15 +61,21 @@ public class UsuarioController {
     }
 
     @GetMapping("/{idUsuario}")
-    public UsuarioResponse obtenerUsuario(@PathVariable Long idUsuario) {
+    public UsuarioResponse obtenerUsuario(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable Long idUsuario
+    ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         return usuarioService.obtenerUsuario(idUsuario);
     }
 
     @PutMapping("/{idUsuario}")
     public UsuarioResponse actualizarUsuario(
+        @AuthenticationPrincipal Jwt jwt,
         @PathVariable Long idUsuario,
         @Valid @RequestBody ActualizarUsuarioRequest request
     ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         return usuarioService.actualizarUsuario(idUsuario, request);
     }
 
@@ -79,9 +89,11 @@ public class UsuarioController {
 
     @PostMapping("/{idUsuario}/perfiles/estudiante")
     public ResponseEntity<PerfilEstudianteResponse> crearPerfilEstudiante(
+        @AuthenticationPrincipal Jwt jwt,
         @PathVariable Long idUsuario,
         @Valid @RequestBody CrearPerfilEstudianteRequest request
     ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         PerfilEstudianteResponse response = usuarioService.crearPerfilEstudiante(idUsuario, request);
         return ResponseEntity
             .created(URI.create("/api/usuarios/" + idUsuario + "/perfiles/estudiante"))
@@ -89,28 +101,40 @@ public class UsuarioController {
     }
 
     @GetMapping("/{idUsuario}/perfiles/estudiante")
-    public PerfilEstudianteResponse obtenerPerfilEstudiante(@PathVariable Long idUsuario) {
+    public PerfilEstudianteResponse obtenerPerfilEstudiante(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable Long idUsuario
+    ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         return usuarioService.obtenerPerfilEstudiante(idUsuario);
     }
 
     @PutMapping("/{idUsuario}/perfiles/estudiante")
     public PerfilEstudianteResponse actualizarPerfilEstudiante(
+        @AuthenticationPrincipal Jwt jwt,
         @PathVariable Long idUsuario,
         @Valid @RequestBody ActualizarPerfilEstudianteRequest request
     ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         return usuarioService.actualizarPerfilEstudiante(idUsuario, request);
     }
 
     @GetMapping("/{idUsuario}/perfiles/estudiante/doble-titulaciones")
-    public List<DobleTitulacionResponse> listarDobleTitulaciones(@PathVariable Long idUsuario) {
+    public List<DobleTitulacionResponse> listarDobleTitulaciones(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable Long idUsuario
+    ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         return usuarioService.listarDobleTitulaciones(idUsuario);
     }
 
     @PostMapping("/{idUsuario}/perfiles/estudiante/doble-titulaciones")
     public ResponseEntity<DobleTitulacionResponse> crearDobleTitulacion(
+        @AuthenticationPrincipal Jwt jwt,
         @PathVariable Long idUsuario,
         @Valid @RequestBody CrearDobleTitulacionRequest request
     ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         DobleTitulacionResponse response = usuarioService.crearDobleTitulacion(idUsuario, request);
         return ResponseEntity
             .created(URI.create(
@@ -122,9 +146,11 @@ public class UsuarioController {
 
     @DeleteMapping("/{idUsuario}/perfiles/estudiante/doble-titulaciones/{idDobleTitulacion}")
     public ResponseEntity<Void> eliminarDobleTitulacion(
+        @AuthenticationPrincipal Jwt jwt,
         @PathVariable Long idUsuario,
         @PathVariable Long idDobleTitulacion
     ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         usuarioService.eliminarDobleTitulacion(idUsuario, idDobleTitulacion);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
@@ -179,9 +205,11 @@ public class UsuarioController {
 
     @PostMapping("/{idUsuario}/perfiles/participante-externo")
     public ResponseEntity<PerfilParticipanteExternoResponse> crearPerfilParticipanteExterno(
+        @AuthenticationPrincipal Jwt jwt,
         @PathVariable Long idUsuario,
         @Valid @RequestBody CrearPerfilParticipanteExternoRequest request
     ) {
+        validarAccesoPropioOAdmin(jwt, idUsuario);
         PerfilParticipanteExternoResponse response = usuarioService.crearPerfilParticipanteExterno(idUsuario, request);
         return ResponseEntity
             .created(URI.create("/api/usuarios/" + idUsuario + "/perfiles/participante-externo"))
@@ -191,5 +219,28 @@ public class UsuarioController {
     @GetMapping("/{idUsuario}/perfiles/participante-externo")
     public PerfilParticipanteExternoResponse obtenerPerfilParticipanteExterno(@PathVariable Long idUsuario) {
         return usuarioService.obtenerPerfilParticipanteExterno(idUsuario);
+    }
+
+    /**
+     * Permite que el propio usuario gestione su perfil sobre su {@code idUsuario},
+     * o que un administrador lo haga sobre cualquiera. Replica el patron usado en
+     * los demas controllers self-service (p. ej. PuntoInnovacionController).
+     */
+    private void validarAccesoPropioOAdmin(Jwt jwt, Long idUsuario) {
+        if (jwt == null) {
+            throw new UnauthorizedException("Autenticacion requerida");
+        }
+        Number idClaim = jwt.getClaim("idUsuario");
+        Long idSolicitante = idClaim == null ? null : idClaim.longValue();
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        boolean esAdmin = roles != null && roles.stream()
+            .anyMatch(rol -> rol != null && rol.equalsIgnoreCase("administrador"));
+
+        if (!esAdmin && !idUsuario.equals(idSolicitante)) {
+            throw new ApiException(
+                HttpStatus.FORBIDDEN,
+                "No puede gestionar el perfil de otro usuario"
+            );
+        }
     }
 }

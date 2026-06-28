@@ -4,9 +4,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import ni.edu.uam.innovacion.common.document.PdfDocumentService;
 import ni.edu.uam.innovacion.common.exception.BadRequestException;
+import ni.edu.uam.innovacion.modules.catalog.entity.Carrera;
+import ni.edu.uam.innovacion.modules.catalog.repository.CarreraRepository;
 import ni.edu.uam.innovacion.modules.dashboard.dto.AdminDashboardResponse;
 import ni.edu.uam.innovacion.modules.dashboard.service.DashboardAdminService;
 import ni.edu.uam.innovacion.modules.participation.entity.Participacion;
@@ -17,7 +21,12 @@ import ni.edu.uam.innovacion.modules.points.enums.EstadoPuntos;
 import ni.edu.uam.innovacion.modules.points.enums.TipoMovimientoPuntos;
 import ni.edu.uam.innovacion.modules.points.service.PuntoInnovacionService;
 import ni.edu.uam.innovacion.modules.report.dto.ArchivoDescarga;
+import ni.edu.uam.innovacion.modules.report.dto.ParticipanteUnicoResponse;
+import ni.edu.uam.innovacion.modules.report.dto.ReporteParticipantesUnicosResponse;
 import ni.edu.uam.innovacion.modules.report.enums.FormatoReporte;
+import ni.edu.uam.innovacion.modules.user.entity.Usuario;
+import ni.edu.uam.innovacion.modules.user.entity.UsuarioRol;
+import ni.edu.uam.innovacion.modules.user.repository.PerfilEstudianteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,17 +41,23 @@ public class ReporteAdminService {
     private final ParticipacionRepository participacionRepository;
     private final DashboardAdminService dashboardService;
     private final PdfDocumentService pdfService;
+    private final CarreraRepository carreraRepository;
+    private final PerfilEstudianteRepository perfilEstudianteRepository;
 
     public ReporteAdminService(
         PuntoInnovacionService puntoService,
         ParticipacionRepository participacionRepository,
         DashboardAdminService dashboardService,
-        PdfDocumentService pdfService
+        PdfDocumentService pdfService,
+        CarreraRepository carreraRepository,
+        PerfilEstudianteRepository perfilEstudianteRepository
     ) {
         this.puntoService = puntoService;
         this.participacionRepository = participacionRepository;
         this.dashboardService = dashboardService;
         this.pdfService = pdfService;
+        this.carreraRepository = carreraRepository;
+        this.perfilEstudianteRepository = perfilEstudianteRepository;
     }
 
     public ArchivoDescarga generarPuntos(
@@ -186,6 +201,105 @@ public class ReporteAdminService {
             List.of("Metrica", "Valor"),
             filas,
             "reporte-dashboard"
+        );
+    }
+
+    /**
+     * Genera un reporte JSON de participantes únicos, diferenciando entre el total
+     * de inscripciones y la cantidad real de personas distintas (RN-13).
+     *
+     * Filtros opcionales: anio (año de validación), idCarrera (carrera principal
+     * del estudiante), idFacultad (carreras de esa facultad), perfil (nombre del
+     * rol: estudiante, participante_externo, docente, mentor).
+     */
+    public ReporteParticipantesUnicosResponse participantesUnicos(
+        Integer anio,
+        Long idCarrera,
+        Long idFacultad,
+        String perfil
+    ) {
+        List<Participacion> todas = participacionRepository.findAllByOrderByCreadoEnDesc();
+        long totalInscripciones = todas.size();
+
+        // IDs de carreras de la facultad seleccionada (para filtro por facultad)
+        List<Long> idCarrerasFacultad = idFacultad == null ? null :
+            carreraRepository.findByFacultad_IdOrderByNombreAsc(idFacultad)
+                .stream().map(Carrera::getId).toList();
+
+        // Agrupa participaciones por usuario, aplicando filtros
+        Map<Long, List<Participacion>> porUsuario = new LinkedHashMap<>();
+        for (Participacion p : todas) {
+            Usuario u = p.getInscripcion().getUsuario();
+
+            // Filtro por año de validación/creación
+            if (anio != null) {
+                LocalDateTime fecha = p.getFechaValidacion() != null
+                    ? p.getFechaValidacion() : p.getCreadoEn();
+                if (fecha == null || fecha.getYear() != anio) {
+                    continue;
+                }
+            }
+
+            // Filtro por carrera principal del estudiante
+            if (idCarrera != null) {
+                var perfil_ = perfilEstudianteRepository.findById(u.getIdUsuario());
+                if (perfil_.isEmpty() || !idCarrera.equals(perfil_.get().getIdCarreraPrincipal())) {
+                    continue;
+                }
+            }
+
+            // Filtro por facultad (carreras de esa facultad)
+            if (idCarrerasFacultad != null) {
+                var perfilEst = perfilEstudianteRepository.findById(u.getIdUsuario());
+                if (perfilEst.isEmpty() || !idCarrerasFacultad.contains(perfilEst.get().getIdCarreraPrincipal())) {
+                    continue;
+                }
+            }
+
+            // Filtro por rol/perfil
+            if (perfil != null && !perfil.isBlank()) {
+                boolean tieneRol = u.getUsuarioRoles().stream()
+                    .filter(ur -> Boolean.TRUE.equals(ur.getActivo()))
+                    .map(UsuarioRol::getRol)
+                    .anyMatch(r -> r.getNombre().equalsIgnoreCase(perfil));
+                if (!tieneRol) {
+                    continue;
+                }
+            }
+
+            porUsuario.computeIfAbsent(u.getIdUsuario(), k -> new ArrayList<>()).add(p);
+        }
+
+        List<ParticipanteUnicoResponse> participantes = porUsuario.entrySet().stream()
+            .map(entry -> {
+                Usuario u = entry.getValue().get(0).getInscripcion().getUsuario();
+                List<String> roles = u.getUsuarioRoles().stream()
+                    .filter(ur -> Boolean.TRUE.equals(ur.getActivo()))
+                    .map(ur -> ur.getRol().getNombre())
+                    .sorted()
+                    .toList();
+                List<String> actividades = entry.getValue().stream()
+                    .map(p -> p.getInscripcion().getActividad().getNombre())
+                    .distinct()
+                    .sorted()
+                    .toList();
+                return new ParticipanteUnicoResponse(
+                    u.getIdUsuario(),
+                    u.getNombreCompleto(),
+                    u.getDocumento(),
+                    u.getCorreo(),
+                    roles,
+                    entry.getValue().size(),
+                    actividades
+                );
+            })
+            .sorted(java.util.Comparator.comparing(ParticipanteUnicoResponse::nombreCompleto))
+            .toList();
+
+        return new ReporteParticipantesUnicosResponse(
+            totalInscripciones,
+            participantes.size(),
+            participantes
         );
     }
 

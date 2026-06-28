@@ -108,15 +108,23 @@ public class UsuarioService {
 
         validarCorreoDisponible(correo);
         validarDocumentoDisponible(documento);
+        String cedula = limpiar(request.cedula());
+        if (cedula != null && !cedula.isBlank()) {
+            validarCedulaDisponible(cedula);
+        } else {
+            cedula = null;
+        }
 
         Usuario usuario = new Usuario();
         usuario.setNombreCompleto(limpiar(request.nombreCompleto()));
         usuario.setDocumento(documento);
+        usuario.setCedula(cedula);
         usuario.setTelefono(limpiar(request.telefono()));
         usuario.setCorreo(correo);
         usuario.setContrasenaHash(passwordEncoder.encode(request.contrasena()));
         usuario.setSexo(limpiar(request.sexo()));
         usuario.setTallaCamisa(limpiar(request.tallaCamisa()));
+        usuario.setFechaNacimiento(request.fechaNacimiento());
         usuario.setEstado(EstadoUsuario.ACTIVO);
 
         return usuarioMapper.toResponse(usuarioRepository.save(usuario));
@@ -146,13 +154,23 @@ public class UsuarioService {
         if (usuarioRepository.existsByDocumentoAndIdUsuarioNot(documento, idUsuario)) {
             throw new DuplicateResourceException("Ya existe otro usuario con el documento " + documento);
         }
+        String cedula = limpiar(request.cedula());
+        if (cedula != null && !cedula.isBlank()) {
+            if (usuarioRepository.existsByCedulaAndIdUsuarioNot(cedula, idUsuario)) {
+                throw new DuplicateResourceException("Ya existe otro usuario con la cédula " + cedula);
+            }
+        } else {
+            cedula = null;
+        }
 
         usuario.setNombreCompleto(limpiar(request.nombreCompleto()));
         usuario.setDocumento(documento);
+        usuario.setCedula(cedula);
         usuario.setTelefono(limpiar(request.telefono()));
         usuario.setCorreo(correo);
         usuario.setSexo(limpiar(request.sexo()));
         usuario.setTallaCamisa(limpiar(request.tallaCamisa()));
+        usuario.setFechaNacimiento(request.fechaNacimiento());
 
         return usuarioMapper.toResponse(usuarioRepository.save(usuario));
     }
@@ -230,7 +248,7 @@ public class UsuarioService {
     @Transactional
     public PerfilEstudianteResponse crearPerfilEstudiante(Long idUsuario, CrearPerfilEstudianteRequest request) {
         Usuario usuario = buscarUsuario(idUsuario);
-        validarRolActivo(idUsuario, ROL_ESTUDIANTE, "Para crear perfil estudiante el usuario debe tener rol estudiante activo");
+        garantizarRolAsignado(idUsuario, usuario, ROL_ESTUDIANTE);
         Carrera carreraPrincipal = obtenerCarreraActiva(
             request.idCarreraPrincipal(),
             "No existe la carrera principal con id " + request.idCarreraPrincipal(),
@@ -461,11 +479,7 @@ public class UsuarioService {
         CrearPerfilParticipanteExternoRequest request
     ) {
         Usuario usuario = buscarUsuario(idUsuario);
-        validarRolActivo(
-            idUsuario,
-            ROL_PARTICIPANTE_EXTERNO,
-            "Para crear perfil participante externo el usuario debe tener rol participante_externo activo"
-        );
+        garantizarRolAsignado(idUsuario, usuario, ROL_PARTICIPANTE_EXTERNO);
 
         if (perfilParticipanteExternoRepository.existsById(idUsuario)) {
             throw new DuplicateResourceException("El usuario ya tiene perfil participante externo");
@@ -559,6 +573,31 @@ public class UsuarioService {
         }
     }
 
+    /**
+     * Asigna (o reactiva) automaticamente el rol indicado al usuario. Se usa al
+     * registrar perfiles self-service de estudiante y participante_externo, para
+     * que la cuenta quede con su rol activo sin intervencion del administrador.
+     * Los roles administrador, docente y mentor siguen siendo manuales
+     * (ver {@link #validarRolActivo}).
+     */
+    private void garantizarRolAsignado(Long idUsuario, Usuario usuario, String nombreRol) {
+        Rol rol = rolRepository.findByNombreIgnoreCase(nombreRol)
+            .orElseThrow(() -> new ResourceNotFoundException("No existe el rol " + nombreRol));
+        if (!rol.estaActivo()) {
+            throw new BadRequestException("El rol " + nombreRol + " debe estar activo");
+        }
+
+        UsuarioRol usuarioRol = usuarioRolRepository
+            .findByUsuarioIdUsuarioAndRolNombreIgnoreCase(idUsuario, nombreRol)
+            .orElseGet(UsuarioRol::new);
+        usuarioRol.setUsuario(usuario);
+        usuarioRol.setRol(rol);
+        usuarioRol.setActivo(Boolean.TRUE);
+        usuarioRol.setFechaAsignacion(LocalDateTime.now());
+        UsuarioRol guardado = usuarioRolRepository.saveAndFlush(usuarioRol);
+        usuario.getUsuarioRoles().add(guardado);
+    }
+
     private Rol bloquearRolAdministrador() {
         return rolRepository.findByNombreIgnoreCaseForUpdate(ROL_ADMINISTRADOR)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el rol " + ROL_ADMINISTRADOR));
@@ -603,6 +642,12 @@ public class UsuarioService {
     private void validarDocumentoDisponible(String documento) {
         if (usuarioRepository.existsByDocumento(documento)) {
             throw new DuplicateResourceException("Ya existe un usuario con el documento " + documento);
+        }
+    }
+
+    private void validarCedulaDisponible(String cedula) {
+        if (usuarioRepository.existsByCedula(cedula)) {
+            throw new DuplicateResourceException("Ya existe un usuario con la cédula " + cedula);
         }
     }
 

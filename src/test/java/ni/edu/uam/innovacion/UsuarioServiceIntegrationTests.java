@@ -84,11 +84,13 @@ class UsuarioServiceIntegrationTests {
         CrearUsuarioRequest duplicado = new CrearUsuarioRequest(
             "Usuario Duplicado",
             "DOC-CORREO-2",
+            null,
             "88880000",
             "usuario-correo@uam.edu.ni",
             "secreto123",
             "F",
-            "M"
+            "M",
+            null
         );
 
         assertThrows(DuplicateResourceException.class, () -> usuarioService.crearUsuario(duplicado));
@@ -101,11 +103,13 @@ class UsuarioServiceIntegrationTests {
         CrearUsuarioRequest duplicado = new CrearUsuarioRequest(
             "Usuario Duplicado",
             "DOC-DOCUMENTO",
+            null,
             "88880000",
             "otro-documento@uam.edu.ni",
             "secreto123",
             "F",
-            "M"
+            "M",
+            null
         );
 
         assertThrows(DuplicateResourceException.class, () -> usuarioService.crearUsuario(duplicado));
@@ -148,13 +152,19 @@ class UsuarioServiceIntegrationTests {
     }
 
     @Test
-    void rechazaPerfilEstudianteSinRolEstudiante() {
-        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("sin-rol-estudiante"));
-        Carrera carrera = crearCarrera("sin-rol-estudiante");
+    void asignaRolEstudianteAutomaticamenteAlCrearPerfil() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("auto-rol-estudiante"));
+        Carrera carrera = crearCarrera("auto-rol-estudiante");
 
-        assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilEstudiante(
+        PerfilEstudianteResponse creado = usuarioService.crearPerfilEstudiante(
             usuario.idUsuario(),
-            new CrearPerfilEstudianteRequest("CIF-SIN-ROL", "sin-rol@uam.edu.ni", carrera.getId())
+            new CrearPerfilEstudianteRequest("CIF-AUTO-ROL", "auto-rol@uam.edu.ni", carrera.getId())
+        );
+
+        assertEquals(usuario.idUsuario(), creado.idUsuario());
+        assertTrue(usuarioRolRepository.existsByUsuarioIdUsuarioAndRolNombreIgnoreCaseAndActivoTrue(
+            usuario.idUsuario(),
+            "estudiante"
         ));
     }
 
@@ -426,12 +436,18 @@ class UsuarioServiceIntegrationTests {
     }
 
     @Test
-    void rechazaPerfilParticipanteExternoSinRolParticipanteExterno() {
-        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("sin-rol-externo"));
+    void asignaRolParticipanteExternoAutomaticamenteAlCrearPerfil() {
+        UsuarioResponse usuario = usuarioService.crearUsuario(usuarioRequest("auto-rol-externo"));
 
-        assertThrows(BadRequestException.class, () -> usuarioService.crearPerfilParticipanteExterno(
+        PerfilParticipanteExternoResponse creado = usuarioService.crearPerfilParticipanteExterno(
             usuario.idUsuario(),
             perfilParticipanteExternoRequest()
+        );
+
+        assertEquals(usuario.idUsuario(), creado.idUsuario());
+        assertTrue(usuarioRolRepository.existsByUsuarioIdUsuarioAndRolNombreIgnoreCaseAndActivoTrue(
+            usuario.idUsuario(),
+            "participante_externo"
         ));
     }
 
@@ -472,11 +488,13 @@ class UsuarioServiceIntegrationTests {
         return new CrearUsuarioRequest(
             "Usuario " + sufijo,
             "DOC-" + sufijo.toUpperCase(),
+            null,
             "88880000",
             "usuario-" + normalizado + "@uam.edu.ni",
             "secreto123",
             "F",
-            "M"
+            "M",
+            null
         );
     }
 

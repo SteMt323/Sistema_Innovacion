@@ -6,6 +6,7 @@ import ni.edu.uam.innovacion.modules.participation.enums.EstadoParticipacion;
 import ni.edu.uam.innovacion.modules.points.enums.EstadoPuntos;
 import ni.edu.uam.innovacion.modules.points.enums.TipoMovimientoPuntos;
 import ni.edu.uam.innovacion.modules.report.dto.ArchivoDescarga;
+import ni.edu.uam.innovacion.modules.report.dto.ReporteParticipantesUnicosResponse;
 import ni.edu.uam.innovacion.modules.report.enums.FormatoReporte;
 import ni.edu.uam.innovacion.modules.report.service.ReporteAdminService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -83,6 +84,20 @@ public class ReporteAdminController {
             fechaDesde,
             fechaHasta
         ));
+    }
+
+    /**
+     * Devuelve la cantidad de inscripciones totales y la lista de participantes
+     * únicos (RN-13). Filtros opcionales: anio, idCarrera, idFacultad, perfil.
+     */
+    @GetMapping("/participantes-unicos")
+    public ReporteParticipantesUnicosResponse participantesUnicos(
+        @RequestParam(required = false) Integer anio,
+        @RequestParam(required = false) Long idCarrera,
+        @RequestParam(required = false) Long idFacultad,
+        @RequestParam(required = false) String perfil
+    ) {
+        return reporteService.participantesUnicos(anio, idCarrera, idFacultad, perfil);
     }
 
     private ResponseEntity<byte[]> descargar(ArchivoDescarga archivo) {
